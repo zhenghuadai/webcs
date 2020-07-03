@@ -13,7 +13,7 @@ http://zhenghuadai.github.io/webCS.html
 <script src='http://zhenghuadai.github.io/js/webcs.js'></script>                    
 
 ### Example of matrix multiply
-```javascript
+```csharp
        function sgemmv1(A,B,C){
             return `
                 // C[M, N] = A[M, K] * B[K, N]
@@ -29,7 +29,8 @@ http://zhenghuadai.github.io/webCS.html
                 C[thread.y*N + thread.x] = sum;
             `;
         }
-
+```
+```javascript
         let M = 64, N = 64, K =64;
         var createArray = function ( n) { 
             var buf = new Float32Array(n);
