@@ -41,7 +41,7 @@ http://zhenghuadai.github.io/webCS.html
         let cpuC = createArray(M*N);
         let webCS = new WebCS();
         let cs_sgemm = webCS.createShader(sgemmv1, {local_size:[8, 8, 1], groups:[M/8, N/8, 1]});
-        cs_sgemm.setUniform('MNK', N, N, N, N).run(cpuA, cpuB, cpuC);
+        cs_sgemm.setUniform('MNK', M, N, K, 0).run(cpuA, cpuB, cpuC);
         cs_sgemm.getData('C', cpuC);
 ```
 ### kernel
