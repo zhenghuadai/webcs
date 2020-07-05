@@ -45,12 +45,39 @@ http://zhenghuadai.github.io/webCS.html
         cs_sgemm.setUniform('MNK', M, N, K, 0).run(cpuA, cpuB, cpuC);
         cs_sgemm.getData('C', cpuC);
 ```
+### Example of processing image 
+```csharp
+        function glsl_texture2(src, dst){
+            return `
+            ivec2 pos = ivec2(thread.xy);
+            vec4 pixel = imageLoad(src, pos);
+            vec4 invert = vec4(1.0 - pixel.x, 1.0 - pixel.y, 1.0 - pixel.z, 1.0);
+            imageStore(dst, pos, invert);
+            `;
+        }
+```
+```javascript
+        var X = 512, Y = 512, Z = 1;
+        let webCS = new WebCS({width:X, height:Y});
+        // or let webCS = new WebCS({canvas:$("#canvas2GPU")[0]});
+        let cs_texture2 = webCS.createShader(glsl_texture2, { local_size:[8, 8, 1], groups:[X/8, Y/8, 1], params:{src:'texture', 'dst':'texture'}});
+
+        let texSrc = $('#image000')[0];
+        cs_texture2.run(texSrc, null);
+
+        let tex = cs_texture2.getTexture('dst');
+        webCS.present(tex);
+        $("#display1")[0].appendChild(webCS.canvas);
+```
 ### kernel
 A compute kernel is created by webCS.createShader(kernel_function, settings) from kernel_function; 
 ### input
 input type for a kernel:
 - js TypedArray , such as Float32Array
 - WebGLBuffer
+- WebGLTexture
+- HTMLImageElement
+- HTMLCanvasElement
 
 ### output
  - getBuffer(argument_name) to return the WebGLBuffer
