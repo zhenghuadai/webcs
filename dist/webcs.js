@@ -28,7 +28,18 @@ class CSKernel {
         let argName = this.settings.params.all[i];
         let argType = this.settings.params[argName].type;
         if (argType == 'buffer') {
-            if (arg instanceof WebGLBuffer) {
+            let w = this.settings.groups[0] * this.settings.local_size[0];
+            let h = this.settings.groups[1] * this.settings.local_size[1];
+            if (arg == null) {
+                if (this.vids[i] == null) {
+                    this.vids[i] = gl.createBuffer();
+                    gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, this.vids[i]);
+                    gl.bufferData(
+                        gl.SHADER_STORAGE_BUFFER, size, gl.STATIC_DRAW);
+                    gl.bindBufferBase(
+                        gl.SHADER_STORAGE_BUFFER, i, this.vids[i]);
+                }
+            } else if (arg instanceof WebGLBuffer) {
                 gl.bindBufferBase(gl.SHADER_STORAGE_BUFFER, i, arg);
                 this.vids[i] = arg;
             } else if (_isArray(arg)) {
@@ -49,9 +60,9 @@ class CSKernel {
                 gl.bindBufferBase(gl.SHADER_STORAGE_BUFFER, i, this.vids[i]);
             }
         } else if (argType == 'texture') {
+            let w = this.webCS.canvas.width;
+            let h = this.webCS.canvas.height;
             function createTexture() {
-                let w = this.webCS.canvas.width;
-                let h = this.webCS.canvas.height;
                 let tex = gl.createTexture();
                 gl.bindTexture(gl.TEXTURE_2D, tex);
                 gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, w, h);
@@ -63,16 +74,16 @@ class CSKernel {
                 }
             } else if (arg instanceof WebGLTexture) {
                 this.vids[i] = arg;
-            } else if ((arg instanceof HTMLCanvasElement) || (arg instanceof HTMLImageElement)) {
+            } else if (
+                (arg instanceof HTMLCanvasElement) ||
+                (arg instanceof HTMLImageElement)) {
                 if (this.vids[i] == null) {
                     this.vids[i] = createTexture.apply(this);
                 }
-                let w = this.webCS.canvas.width;
-                let h = this.webCS.canvas.height;
                 gl.bindTexture(gl.TEXTURE_2D, this.vids[i]);
                 gl.texSubImage2D(
-                    gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA,
-                    gl.UNSIGNED_BYTE, arg);
+                    gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE,
+                    arg);
             }
             gl.bindImageTexture(
                 i, this.vids[i], 0, false, 0, gl.READ_WRITE, gl.RGBA8);
@@ -134,13 +145,23 @@ class CSKernel {
     }
 
     updateArgments(args) {
+        let nargs = this.settings.params.all.length;
         this.vids =
-            this.vids || Array.from({length: args.length}, (v, i) => null);
-        if (args.lenght != this.vids.length) {
+            this.vids || Array.from({length: nargs}, (v, i) => null);
+        if ((args.lenght != nargs) &&
+            (args.length != nargs +1)) {
             // error
         }
-        for (var i = 0; i < args.length; i++) {
+        for (var i = 0; i < this.vids.length; i++) {
             this.__updateArg(i, args[i]);
+        }
+        if(args.length == nargs + 1){
+            // last param is {'uniform_var':[]}
+            let uniforms = args[nargs]
+            for(var uniform_key in uniforms){
+                let uniform_args = [uniform_key].concat(uniforms[uniform_key]);
+                this.setUniform.apply(this, uniform_args);
+            }
         }
     }
 };

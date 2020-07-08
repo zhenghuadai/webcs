@@ -43,6 +43,8 @@ http://zhenghuadai.github.io/webCS.html
         let webCS = new WebCS();
         let cs_sgemm = webCS.createShader(sgemmv1, {local_size:[8, 8, 1], groups:[M/8, N/8, 1]});
         cs_sgemm.setUniform('MNK', M, N, K, 0).run(cpuA, cpuB, cpuC);
+        // or
+        // cs_sgemm_naive.run(cpuA, cpuB, cpuC, {'MNK':[M,N,K,0]});
         cs_sgemm.getData('C', cpuC);
 ```
 ### Example of processing image 
