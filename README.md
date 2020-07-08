@@ -42,9 +42,11 @@ http://zhenghuadai.github.io/webCS.html
         let cpuC = createArray(M*N);
         let webCS = new WebCS();
         let cs_sgemm = webCS.createShader(sgemmv1, {local_size:[8, 8, 1], groups:[M/8, N/8, 1]});
+        
         cs_sgemm.setUniform('MNK', M, N, K, 0).run(cpuA, cpuB, cpuC);
         // or
-        // cs_sgemm_naive.run(cpuA, cpuB, cpuC, {'MNK':[M,N,K,0]});
+        // cs_sgemm.run(cpuA, cpuB, cpuC, {'MNK':[M,N,K,0]});
+        
         cs_sgemm.getData('C', cpuC);
 ```
 ### Example of processing image 
@@ -62,7 +64,10 @@ http://zhenghuadai.github.io/webCS.html
         var X = 512, Y = 512, Z = 1;
         let webCS = new WebCS({width:X, height:Y});
         // or let webCS = new WebCS({canvas:$("#canvas2GPU")[0]});
-        let cs_texture2 = webCS.createShader(glsl_texture2, { local_size:[8, 8, 1], groups:[X/8, Y/8, 1], params:{src:'texture', 'dst':'texture'}});
+        let cs_texture2 = webCS.createShader(glsl_texture2, 
+                                            { local_size:[8, 8, 1],  groups:[X/8, Y/8, 1],
+                                              params:{src:'texture', 'dst':'texture'}
+                                            });
 
         let texSrc = $('#image000')[0];
         cs_texture2.run(texSrc, null);
