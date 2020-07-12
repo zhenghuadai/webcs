@@ -130,35 +130,33 @@ class CSKernel {
     getData(name, dstarray) {
         var gl = this.webCS.gl;
         let vid = this.getBuffer(name);
-        gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, vid);
-        let vid_size =
-            gl.getBufferParameter(gl.SHADER_STORAGE_BUFFER, gl.BUFFER_SIZE);
-        if (dstarray == undefined) {
-            dstarray = new Uint8Array(vid_size);
-        } else if (typeof dstarray === 'string') {
-            if (dstarray === 'float') {
-                dstarray = new Float32Array(vid_size / 4);
-            }
-        }
-        gl.getBufferSubData(gl.SHADER_STORAGE_BUFFER, 0, dstarray)
-        return dstarray;
+        return this.webCS.getData(vid, dstarray);
+    }
+
+    setGroups(x, y = 1, z = 1) {
+        this.groups = [x, y, z];
+        return this;
     }
 
     updateArgments(args) {
         let nargs = this.settings.params.all.length;
-        this.vids =
-            this.vids || Array.from({length: nargs}, (v, i) => null);
-        if ((args.lenght != nargs) &&
-            (args.length != nargs +1)) {
+        this.vids = this.vids || Array.from({length: nargs}, (v, i) => null);
+        if ((args.lenght != nargs) && (args.length != nargs + 1) &&
+            (args.length != nargs + 3) && (args.length != nargs + 4)) {
             // error
         }
         for (var i = 0; i < this.vids.length; i++) {
             this.__updateArg(i, args[i]);
         }
-        if(args.length == nargs + 1){
+        if ((args.length == nargs + 3) || (args.length == nargs + 4)) {
+            this.groups[0] = args[nargs];
+            this.groups[1] = args[nargs + 1];
+            this.groups[2] = args[nargs + 2];
+        }
+        if (args.length == nargs + 1) {
             // last param is {'uniform_var':[]}
-            let uniforms = args[nargs]
-            for(var uniform_key in uniforms){
+            let uniforms = args[args.length - 1];
+            for (var uniform_key in uniforms) {
                 let uniform_args = [uniform_key].concat(uniforms[uniform_key]);
                 this.setUniform.apply(this, uniform_args);
             }
@@ -187,9 +185,15 @@ class WebCS {
     }
     createShaderFromString(source, settings = {}) {
         let local_size = settings.local_size;
+        // clang-format off
         let local_size_str = `#version 310 es
-        layout (local_size_x = ${local_size[0]}, local_size_y = ${
-            local_size[1]}, local_size_z = ${local_size[2]}) in;`
+        #define LOCAL_SIZE_X ${local_size[0]}u
+        #define LOCAL_SIZE_Y ${local_size[1]}u
+        #define LOCAL_SIZE_Z ${local_size[2]}u
+        #define thread gl_GlobalInvocationID
+        #define localthread gl_LocalInvocationID
+        layout (local_size_x = ${local_size[0]}, local_size_y = ${local_size[1]}, local_size_z = ${local_size[2]}) in;`
+        // clang-format on 
         var gl = this.gl;
         var shader = gl.createShader(gl.COMPUTE_SHADER);
         gl.shaderSource(shader, local_size_str + source);
@@ -216,6 +220,17 @@ class WebCS {
         let layout_str = '';
         let comments = /(\/\/.*)|(\/\*[\s\S]*?\*\/)/g;
         let csmain_nocomments = csmain_str.replace(comments, '');
+        let global_str = "";
+        // process the global 
+        if(true)
+        {
+            let re_shared = /shared\s+[^;]+;/g;
+            let matches = [...csmain_nocomments.matchAll(re_shared)];
+            for (let match of matches) {
+                global_str = global_str + match[0];
+            }
+            csmain_str = csmain_str.replace(re_shared, "");
+        }
         // process the parameters
         if (true) {
             let func_str = func.toString();
@@ -359,12 +374,11 @@ class WebCS {
         let source = `
         ${layout_str} 
         ${unform_str}
-        uvec3 thread;
+        ${global_str}
         void csmain(){
             ${csmain_str}
         }
         void main() {
-            thread = gl_GlobalInvocationID;   
             csmain();
         }
         `
@@ -401,6 +415,35 @@ class WebCS {
         let h = this.canvas.height;
         gl.blitFramebuffer(
             0, 0, w, h, 0, 0, w, h, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+    }
+    createBuffer(size) {
+        let gl = this.gl;
+        let buffer = gl.createBuffer();
+        gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, buffer);
+        gl.bufferData(gl.SHADER_STORAGE_BUFFER, size, gl.STATIC_DRAW);
+        return buffer;
+    }
+
+    getData(vid, dstarray) {
+        var gl = this.gl;
+        gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, vid);
+        let vid_size =
+            gl.getBufferParameter(gl.SHADER_STORAGE_BUFFER, gl.BUFFER_SIZE);
+        if (dstarray == undefined) {
+            dstarray = new Uint8Array(vid_size);
+        } else if (typeof dstarray === 'string') {
+            if (dstarray === 'float') {
+                dstarray = new Float32Array(vid_size / 4);
+            }else if(dataarray === 'uint32'){
+                dstarray = new Uint32Array(vid_size / 4);
+            }else if(dataarray === 'uint8'){
+                dstarray = new Uint8Array(vid_size / 4);
+            }else{
+                dstarray = new Uint8Array(vid_size / 4);
+            }
+        }
+        gl.getBufferSubData(gl.SHADER_STORAGE_BUFFER, 0, dstarray)
+        return dstarray;
     }
 };
 win.WebCS = WebCS;
