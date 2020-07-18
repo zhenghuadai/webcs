@@ -202,6 +202,7 @@ class WebCS {
             // error
             var message = gl.getShaderInfoLog(shader);
             console.log(message);
+            settings.error = message;
         }
 
         var cProg = gl.createProgram()
@@ -254,7 +255,7 @@ class WebCS {
                 });
             }
 
-            // detect readonly/writeonly
+            // procecss [], detect readonly/writeonly
             if (true) {
                 let params_tex = Object.keys(settings.params)
                         .filter(key => settings.params[key].type === 'texture');
@@ -263,11 +264,15 @@ class WebCS {
                     // process the texture[]
                     if(true){
                         for (let texname of  params_tex) {
+                            let texreader2 = new RegExp(['(', texname , ')',  '\\s*\\[([^\\[\\]]+)\\]\s*\\[([^\\[\\]]+)\\]'].join(''), 'g');
+                            let texwriter2 = new RegExp(['(', texname , ')',  '\\s*\\[([^\\[\\]]+)\\]\\s*\\[([^\\[\\]]+)\\]\\s=([^;]+);'].join(''), 'g');
                             let texreader = new RegExp(['(', texname , ')',  '\\s*\\[([^\\[\\]]+)\\]'].join(''), 'g');
                             let texwriter = new RegExp(['(', texname , ')',  '\\s*\\[([^\\[\\]]+)\\]\\s*=([^;]+);'].join(''), 'g');
                             //let texreaders = [...csmain_nocomments.matchAll(texreader)];
                             //let texwriters = [...csmain_nocomments.matchAll(texwriter)];
+                            csmain_nocomments= csmain_nocomments.replace(texwriter2, 'imageStore($1,ivec2($3,$2), $4);');
                             csmain_nocomments= csmain_nocomments.replace(texwriter, 'imageStore($1,$2, $3);');
+                            csmain_nocomments= csmain_nocomments.replace(texreader2, 'imageLoad($1,ivec2($3,$2));');
                             csmain_nocomments= csmain_nocomments.replace(texreader, 'imageLoad($1,$2);');
                         }
                     }
