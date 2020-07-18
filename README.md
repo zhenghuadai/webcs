@@ -54,9 +54,9 @@ http://zhenghuadai.github.io/webCS.html
         function glsl_texture2(src, dst){
             return `
             ivec2 pos = ivec2(thread.xy);
-            vec4 pixel = imageLoad(src, pos);
+            vec4 pixel = src[pos];    // vec4 pixel = imageLoad(src, pos);
             vec4 invert = vec4(1.0 - pixel.x, 1.0 - pixel.y, 1.0 - pixel.z, 1.0);
-            imageStore(dst, pos, invert);
+            dst[pos] = invert;        // imageStore(dst, pos, invert);
             `;
         }
 ```
