@@ -221,7 +221,7 @@ class WebCS {
         let comments = /(\/\/.*)|(\/\*[\s\S]*?\*\/)/g;
         let csmain_nocomments = csmain_str.replace(comments, '');
         let global_str = "";
-        // process the global 
+        // process the shared 
         if(true)
         {
             let re_shared = /shared\s+[^;]+;/g;
@@ -229,7 +229,7 @@ class WebCS {
             for (let match of matches) {
                 global_str = global_str + match[0];
             }
-            csmain_str = csmain_str.replace(re_shared, "");
+            csmain_nocomments = csmain_nocomments.replace(re_shared, "");
         }
         // process the parameters
         if (true) {
@@ -254,25 +254,40 @@ class WebCS {
                 });
             }
 
+            // detect readonly/writeonly
             if (true) {
-                // detect readonly/writeonly
-                if (undefined ==
-                    Object.keys(settings.params)
-                        .find(key => settings.params[key].type === 'texture')) {
+                let params_tex = Object.keys(settings.params)
+                        .filter(key => settings.params[key].type === 'texture');
+                if (0 == params_tex.length ) {
                 } else {
+                    // process the texture[]
+                    if(true){
+                        for (let texname of  params_tex) {
+                            let texreader = new RegExp(['(', texname , ')',  '\\s*\\[([^\\[\\]]+)\\]'].join(''), 'g');
+                            let texwriter = new RegExp(['(', texname , ')',  '\\s*\\[([^\\[\\]]+)\\]\\s*=([^;]+);'].join(''), 'g');
+                            //let texreaders = [...csmain_nocomments.matchAll(texreader)];
+                            //let texwriters = [...csmain_nocomments.matchAll(texwriter)];
+                            csmain_nocomments= csmain_nocomments.replace(texwriter, 'imageStore($1,$2, $3);');
+                            csmain_nocomments= csmain_nocomments.replace(texreader, 'imageLoad($1,$2);');
+                        }
+                    }
                     // let's find out the imageStore
-                    let imgst_re = /imageStore\s*\(\s*([^,]+),/g;
-                    let matches = [...csmain_nocomments.matchAll(imgst_re)];
-                    for (let match of matches) {
-                        var vname = match[1].trim();
-                        if (settings.params[vname] == null) {
-                            // error
-                        } else {
-                            settings.params[vname].rwmode = 'w';
+                    if(true){
+                        let imgst_re = /imageStore\s*\(\s*([^,]+),/g;
+                        let matches = [...csmain_nocomments.matchAll(imgst_re)];
+                        for (let match of matches) {
+                            var vname = match[1].trim();
+                            if (settings.params[vname] == null) {
+                                // error
+                            } else {
+                                settings.params[vname].rwmode = 'w';
+                            }
                         }
                     }
                 }
             }
+
+            // Declare the params in GLSL
             for (var pi = 0; pi < params.length; pi++) {
                 let param_name = params[pi];
                 let param_type = settings.params[param_name].type;
@@ -367,7 +382,7 @@ class WebCS {
                         `;
                 unform_str = unform_str + my_uniform_str;
             }
-            csmain_str = csmain_str.replace(/this\.uniform\./g, '');
+           csmain_nocomments = csmain_nocomments.replace(/this\.uniform\./g, '');
         }
 
         // clang-format off
@@ -376,7 +391,7 @@ class WebCS {
         ${unform_str}
         ${global_str}
         void csmain(){
-            ${csmain_str}
+            ${csmain_nocomments}
         }
         void main() {
             csmain();
@@ -434,11 +449,11 @@ class WebCS {
         } else if (typeof dstarray === 'string') {
             if (dstarray === 'float') {
                 dstarray = new Float32Array(vid_size / 4);
-            }else if(dataarray === 'uint32'){
+            } else if (dataarray === 'uint32') {
                 dstarray = new Uint32Array(vid_size / 4);
-            }else if(dataarray === 'uint8'){
+            } else if (dataarray === 'uint8') {
                 dstarray = new Uint8Array(vid_size / 4);
-            }else{
+            } else {
                 dstarray = new Uint8Array(vid_size / 4);
             }
         }
