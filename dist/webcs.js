@@ -38,7 +38,7 @@ class CSKernel {
             let h = this.settings.groups[1] * this.settings.local_size[1];
             if (arg == null) {
                 if (this.vids[i] == null) {
-                    let size = w * h * ((argType.type == 'double' ? 8 : 4);
+                    let size = w * h * ((argType.type == 'double' ? 8 : 4));
                     this.vids[i] = gl.createBuffer();
                     gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, this.vids[i]);
                     gl.bufferData(
