@@ -24,14 +24,21 @@ class CSKernel {
         gl.memoryBarrier(gl.SHADER_IMAGE_ACCESS_BARRIER_BIT);
     }
     __updateArg(i, arg) {
+        let isBuffer = function(argType) {
+            return argType.dim == 1;
+        };
+        let isTexture = function(argType) {
+            return argType.dim == 2;
+        };
         var gl = this.webCS.gl;
         let argName = this.settings.params.all[i];
         let argType = this.settings.params[argName].type;
-        if (argType == 'buffer') {
+        if (isBuffer(argType)) {
             let w = this.settings.groups[0] * this.settings.local_size[0];
             let h = this.settings.groups[1] * this.settings.local_size[1];
             if (arg == null) {
                 if (this.vids[i] == null) {
+                    let size = w * h * ((argType.type == 'double' ? 8 : 4);
                     this.vids[i] = gl.createBuffer();
                     gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, this.vids[i]);
                     gl.bufferData(
@@ -59,7 +66,10 @@ class CSKernel {
                 gl.bufferData(gl.SHADER_STORAGE_BUFFER, arg, gl.STATIC_DRAW);
                 gl.bindBufferBase(gl.SHADER_STORAGE_BUFFER, i, this.vids[i]);
             }
-        } else if (argType == 'texture') {
+        } else if (isTexture(argType)) {
+            let sfmt = this.__str2sfmt(argType.type);
+            let fmt = this.__sfmt2fmt(sfmt);
+            let dataType = this.__fmt2datatype(sfmt);
             let w = this.webCS.canvas.width;
             let h = this.webCS.canvas.height;
             function createTexture() {
@@ -82,14 +92,23 @@ class CSKernel {
                 }
                 gl.bindTexture(gl.TEXTURE_2D, this.vids[i]);
                 gl.texSubImage2D(
-                    gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE,
-                    arg);
+                    gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, dataType, arg);
             }
             gl.bindImageTexture(
                 i, this.vids[i], 0, false, 0, gl.READ_WRITE, gl.RGBA8);
         } else {
             // error
         }
+    }
+
+    __fmt2datatype(fmt) {
+        return this.webCS.Fmt2DataType[fmt] || gl.UNSIGNED_BYTE;
+    }
+    __sfmt2fmt(fmt) {
+        return this.webCS.SFmt2Fmt[fmt] || gl.RGBA;
+    }
+    __str2sfmt(str) {
+        return this.webCS.Str2sFmt[str] || gl.RGBA8;
     }
 
     setUniform(name, v0, ...rest) {
@@ -181,7 +200,24 @@ class WebCS {
         } else {
             this.canvas = settings.canvas;
         }
-        this.gl = this.canvas.getContext('webgl2-compute', {antialias: false})
+        this.gl = this.canvas.getContext('webgl2-compute', {antialias: false});
+        this.Fmt2DataType = {};
+        this.SFmt2Fmt = {};
+        this.Str2sFmt = {};
+        this.__setFmt();
+    }
+    __setFmt(){
+        let gl = this.gl;
+        let fmts = [[gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, 'rgba8'],
+            [gl.RGBA32F, gl.RGBA, gl.FLOAT, 'rgba32f'],
+            [gl.RGBA32I, gl.RGBA, gl.INT  , 'rgba32i'],
+            [gl.RGBA32UI, gl.RGBA, gl.UNSIGNED_INT  , 'rgba32ui'],
+        ];
+        for (let fmt of fmts){
+            this.Fmt2DataType[fmt[0]] =  fmt[2];
+            this.SFmt2Fmt[fmt[0]] = fmt[1];
+            this.Str2sFmt[fmt[3]] = fmt[0];
+        }
     }
     createShaderFromString(source, settings = {}) {
         let local_size = settings.local_size;
@@ -246,9 +282,10 @@ class WebCS {
                 settings.params.all = params;
             }
             if (true) {
+                let that = this;
                 params.forEach(function(ele, idx) {
                     if (settings.params[ele] == null) {
-                        settings.params[ele] = {index: idx, type: 'buffer'};
+                        settings.params[ele] = {index: idx, type: that.__parsetype('buffer')};
                     } else {
                         settings.params[ele].index = idx;
                     }
@@ -258,7 +295,7 @@ class WebCS {
             // procecss [], detect readonly/writeonly
             if (true) {
                 let params_tex = Object.keys(settings.params)
-                        .filter(key => settings.params[key].type === 'texture');
+                        .filter(key => settings.params[key].type != null && settings.params[key].type.dim === 2);
                 if (0 == params_tex.length ) {
                 } else {
                     // process the texture[]
@@ -296,20 +333,22 @@ class WebCS {
             for (var pi = 0; pi < params.length; pi++) {
                 let param_name = params[pi];
                 let param_type = settings.params[param_name].type;
-                if (param_type == 'buffer') {
+                if (param_type.dim == 1) { // buffer
+                    let num_type = param_type.type;
                     // clang-format off
                      layout_str = layout_str +
-                         `layout (std430, binding = ${pi}) buffer ssb${param_name} {  float ${param_name}[]; };`;
+                         `layout (std430, binding = ${pi}) buffer ssb${param_name} {  ${num_type} ${param_name}[]; };`;
                     // clang-format on
-                } else if (param_type == 'texture') {
+                } else if (param_type.dim == 2) {  // texture
                     // clang-format off
+                    let pix_type = param_type.type;
                     let rwmode = settings.params[param_name].rwmode == 'w' ?  'writeonly' : 'readonly';
                     let attr = settings.params[param_name].attr || "";
                     if((attr.indexOf('readonly') == -1 ) && (attr.indexOf('writeonly') == -1)){
                         attr = attr + " " + rwmode; 
                     }
                     layout_str = layout_str +
-                        `layout (rgba8, binding = ${pi}) ${attr} uniform highp image2D ${param_name};`
+                        `layout (${pix_type}, binding = ${pi}) ${attr} uniform highp image2D ${param_name};`
                     // clang-format on
                 } else {
                     // error
@@ -387,7 +426,8 @@ class WebCS {
                         `;
                 unform_str = unform_str + my_uniform_str;
             }
-           csmain_nocomments = csmain_nocomments.replace(/this\.uniform\./g, '');
+            csmain_nocomments =
+                csmain_nocomments.replace(/this\.uniform\./g, '');
         }
 
         // clang-format off
@@ -406,6 +446,28 @@ class WebCS {
         return this.createShaderFromString(source, settings);
     }
 
+    __parsetype(type) {
+        type = type.replace(/\s*/g, '');
+        let bi = -1;
+        let t = 'float';
+        let dim = 1;
+        if (type == 'buffer') {
+            t = 'float';
+            dim = 1;
+        } else if (type == 'texture') {
+            t = 'rgba8';
+            dim = 2;
+        } else if ((bi = type.indexOf('[][]')) >= 0) {
+            t = (bi == 0) ? 'rgba8' : type.substring(0, bi).toLowerCase();
+            dim = 2;
+        } else if ((bi = type.indexOf('[]')) >= 0) {
+            t = (bi == 0) ? 'float' : type.substring(0, bi).toLowerCase();
+            dim = 1;
+        } else {
+            // error
+        }
+        return {'type': t, 'dim': dim};
+    }
     createShader(source, settings = {}) {
         if (true) {
             // convert settings.params
@@ -413,7 +475,7 @@ class WebCS {
                 for (let key in settings.params) {
                     let v = settings.params[key];
                     if (_isString(v)) {
-                        settings.params[key] = {type: v};
+                        settings.params[key] = {type: this.__parsetype(v)};
                     }
                 }
             }
@@ -443,7 +505,16 @@ class WebCS {
         gl.bufferData(gl.SHADER_STORAGE_BUFFER, size, gl.STATIC_DRAW);
         return buffer;
     }
-
+    createTexture(fmt, w, h) {
+        let gl = this.gl;
+        fmt = fmt || gl.RGBA8;
+        w = w || this.canvas.width;
+        h = h || this.canvas.height;
+        let tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texStorage2D(gl.TEXTURE_2D, 1, fmt, w, h);
+        return tex;
+    }
     getData(vid, dstarray) {
         var gl = this.gl;
         gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, vid);
