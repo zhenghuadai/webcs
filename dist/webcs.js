@@ -70,12 +70,14 @@ class CSKernel {
             let sfmt = this.__str2sfmt(argType.type);
             let fmt = this.__sfmt2fmt(sfmt);
             let dataType = this.__fmt2datatype(sfmt);
-            let w = this.webCS.canvas.width;
-            let h = this.webCS.canvas.height;
-            function createTexture() {
+            function createTexture(w,h) {
+                w = w || this.webCS.canvas.width;
+                h = h || this.webCS.canvas.height;
                 let tex = gl.createTexture();
                 gl.bindTexture(gl.TEXTURE_2D, tex);
                 gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, w, h);
+                tex.width = w;
+                tex.height = h;
                 return tex;
             };
             if (arg == null) {
@@ -90,6 +92,11 @@ class CSKernel {
                 if (this.vids[i] == null) {
                     this.vids[i] = createTexture.apply(this);
                 }
+                if(this.vids[i].width != null && this.vids[i].height != null && (this.vids[i].width < arg.width || this.vids[i].height < arg.height)){
+                    this.vids[i] = createTexture.apply(this, [arg.width, arg.height]);
+                }
+                let w = arg.width;
+                let h = arg.height;
                 gl.bindTexture(gl.TEXTURE_2D, this.vids[i]);
                 gl.texSubImage2D(
                     gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, dataType, arg);
@@ -115,7 +122,10 @@ class CSKernel {
         var gl = this.webCS.gl;
         gl.useProgram(this.kernel);
         let loc = gl.getUniformLocation(this.kernel, name);
-        let values = [v0].concat(rest);
+        let values = [v0, 0, 0, 0];
+        for (let i = 0; i < rest.length; i++) {
+            values[i + 1] = rest[i];
+        }
         let mytype = this.settings.uniform[name].type;
         if (mytype == 'uvec4') {
             gl.uniform4ui(loc, v0, values[1], values[2], values[3]);
@@ -206,15 +216,16 @@ class WebCS {
         this.Str2sFmt = {};
         this.__setFmt();
     }
-    __setFmt(){
+    __setFmt() {
         let gl = this.gl;
-        let fmts = [[gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, 'rgba8'],
+        let fmts = [
+            [gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, 'rgba8'],
             [gl.RGBA32F, gl.RGBA, gl.FLOAT, 'rgba32f'],
-            [gl.RGBA32I, gl.RGBA, gl.INT  , 'rgba32i'],
-            [gl.RGBA32UI, gl.RGBA, gl.UNSIGNED_INT  , 'rgba32ui'],
+            [gl.RGBA32I, gl.RGBA, gl.INT, 'rgba32i'],
+            [gl.RGBA32UI, gl.RGBA, gl.UNSIGNED_INT, 'rgba32ui'],
         ];
-        for (let fmt of fmts){
-            this.Fmt2DataType[fmt[0]] =  fmt[2];
+        for (let fmt of fmts) {
+            this.Fmt2DataType[fmt[0]] = fmt[2];
             this.SFmt2Fmt[fmt[0]] = fmt[1];
             this.Str2sFmt[fmt[3]] = fmt[0];
         }
@@ -308,9 +319,9 @@ class WebCS {
                             //let texreaders = [...csmain_nocomments.matchAll(texreader)];
                             //let texwriters = [...csmain_nocomments.matchAll(texwriter)];
                             csmain_nocomments= csmain_nocomments.replace(texwriter2, 'imageStore($1,ivec2($3,$2), $4);');
-                            csmain_nocomments= csmain_nocomments.replace(texwriter, 'imageStore($1,$2, $3);');
+                            csmain_nocomments= csmain_nocomments.replace(texwriter, 'imageStore($1,ivec2($2), $3);');
                             csmain_nocomments= csmain_nocomments.replace(texreader2, 'imageLoad($1,ivec2($3,$2));');
-                            csmain_nocomments= csmain_nocomments.replace(texreader, 'imageLoad($1,$2);');
+                            csmain_nocomments= csmain_nocomments.replace(texreader, 'imageLoad($1,ivec2($2));');
                         }
                     }
                     // let's find out the imageStore
@@ -496,7 +507,7 @@ class WebCS {
         let w = this.canvas.width;
         let h = this.canvas.height;
         gl.blitFramebuffer(
-            0, 0, w, h, 0, 0, w, h, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+            0, 0, w, h, 0, h, w, 0, gl.COLOR_BUFFER_BIT, gl.NEAREST);
     }
     createBuffer(size) {
         let gl = this.gl;
@@ -513,6 +524,8 @@ class WebCS {
         let tex = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, tex);
         gl.texStorage2D(gl.TEXTURE_2D, 1, fmt, w, h);
+        tex.width = w;
+        tex.height = h;
         return tex;
     }
     getData(vid, dstarray) {
