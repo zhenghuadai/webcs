@@ -182,7 +182,7 @@ class CSKernel {
             this.groups[1] = args[nargs + 1];
             this.groups[2] = args[nargs + 2];
         }
-        if (args.length == nargs + 1) {
+        if ((args.length == nargs + 1) || (args.length == nargs + 4)) {
             // last param is {'uniform_var':[]}
             let uniforms = args[args.length - 1];
             for (var uniform_key in uniforms) {
@@ -269,6 +269,8 @@ class WebCS {
         let comments = /(\/\/.*)|(\/\*[\s\S]*?\*\/)/g;
         let csmain_nocomments = csmain_str.replace(comments, '');
         let global_str = "";
+        let global_func_str = ( this.glsl_functions || "" ) + "\n"
+        + (settings.glsl_functions || "");
         // process the shared 
         if(true)
         {
@@ -279,6 +281,33 @@ class WebCS {
             }
             csmain_nocomments = csmain_nocomments.replace(re_shared, "");
         }
+
+        // porcess the function
+        if(true){
+            let func_si = csmain_nocomments.indexOf('function');
+            if(func_si > 0){
+                function indexOfendf(str, si){
+                    let l = str.length;
+                    let ending = 0;
+                    for(let iii = si; iii < l; iii++){
+                        if(str[iii] == '{') ending = ending +1;
+                        if(str[iii] == '}'){
+                            ending = ending - 1;
+                            if(ending == 0){
+                                return iii+1;
+                            }
+                        }
+                    }
+                }
+                while(func_si > 0){
+                    let funcEndI = indexOfendf(csmain_nocomments, func_si+8);
+                    global_func_str = global_func_str + '\n' + csmain_nocomments.substring(func_si+8, funcEndI);
+                    csmain_nocomments = csmain_nocomments.substring(0,func_si) + csmain_nocomments.substring(funcEndI);
+                    func_si = csmain_nocomments.indexOf('function');
+                }
+            }
+        }
+
         // process the parameters
         if (true) {
             let func_str = func.toString();
@@ -446,6 +475,7 @@ class WebCS {
         ${layout_str} 
         ${unform_str}
         ${global_str}
+        ${global_func_str}
         void csmain(){
             ${csmain_nocomments}
         }
