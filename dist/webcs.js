@@ -70,7 +70,7 @@ class CSKernel {
             let sfmt = this.__str2sfmt(argType.type);
             let fmt = this.__sfmt2fmt(sfmt);
             let dataType = this.__fmt2datatype(sfmt);
-            function createTexture(w,h) {
+            function createTexture(w, h) {
                 w = w || this.webCS.canvas.width;
                 h = h || this.webCS.canvas.height;
                 let tex = gl.createTexture();
@@ -92,8 +92,11 @@ class CSKernel {
                 if (this.vids[i] == null) {
                     this.vids[i] = createTexture.apply(this);
                 }
-                if(this.vids[i].width != null && this.vids[i].height != null && (this.vids[i].width < arg.width || this.vids[i].height < arg.height)){
-                    this.vids[i] = createTexture.apply(this, [arg.width, arg.height]);
+                if (this.vids[i].width != null && this.vids[i].height != null &&
+                    (this.vids[i].width < arg.width ||
+                     this.vids[i].height < arg.height)) {
+                    this.vids[i] =
+                        createTexture.apply(this, [arg.width, arg.height]);
                 }
                 let w = arg.width;
                 let h = arg.height;
@@ -271,6 +274,9 @@ class WebCS {
         let global_str = "";
         let global_func_str = ( this.glsl_functions || "" ) + "\n"
         + (settings.glsl_functions || "");
+        var isWhite = function(ch) {
+            return ((ch == ' ') || (ch == '\t') || (ch == '\n'));
+        };
         // process the shared 
         if(true)
         {
@@ -298,12 +304,20 @@ class WebCS {
                             }
                         }
                     }
+                    return null;
                 }
                 while(func_si > 0){
-                    let funcEndI = indexOfendf(csmain_nocomments, func_si+8);
-                    global_func_str = global_func_str + '\n' + csmain_nocomments.substring(func_si+8, funcEndI);
-                    csmain_nocomments = csmain_nocomments.substring(0,func_si) + csmain_nocomments.substring(funcEndI);
-                    func_si = csmain_nocomments.indexOf('function');
+                    if(isWhite(csmain_nocomments[func_si+8])){
+                        let funcEndI = indexOfendf(csmain_nocomments, func_si+8);
+                        if(funcEndI == null){
+                            // Error 
+                        }
+                        global_func_str = global_func_str + '\n' + csmain_nocomments.substring(func_si+8, funcEndI);
+                        csmain_nocomments = csmain_nocomments.substring(0,func_si) + csmain_nocomments.substring(funcEndI);
+                        func_si = csmain_nocomments.indexOf('function');
+                    }else{
+                        func_si = csmain_nocomments.indexOf('function', func_si+8);
+                    }
                 }
             }
         }
@@ -404,9 +418,6 @@ class WebCS {
             let matches = [...csmain_nocomments.matchAll(re)];
             let matches2 = [...csmain_nocomments.matchAll(re2)];
             let revar = /[a-zA-Z0-9_-]{1,}/
-            var isWhite = function(ch) {
-                return ((ch == ' ') || (ch == '\t') || (ch == '\n'));
-            };
             var indexOfSpace = function(s, startIndex) {
                 let si = startIndex;
                 while (!isWhite(s[si])) si++;
