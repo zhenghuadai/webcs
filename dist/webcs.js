@@ -10,7 +10,7 @@ class CSKernel {
     constructor(prog, settings = {}) {
         this.kernel = prog;
         this.local_size = settings.local_size || [32, 1, 1];
-        this.groups = settings.groups || [1, 1, 1];
+        this.groups = settings.groups;
         this.webCS = settings.webCS || new WebCS();
         this.vids = null;
         this.settings = settings;
@@ -19,6 +19,12 @@ class CSKernel {
         var gl = this.webCS.gl;
         gl.useProgram(this.kernel);
         this.updateArgments(arguments);
+        if (this.groups == null) {
+            this.groups = [
+                Math.floor(this.webCS.canvas.width / this.local_size[0]),
+                Math.floor(this.webCS.canvas.height / this.local_size[1]), 1
+            ];
+        }
         gl.dispatchCompute(this.groups[0], this.groups[1], this.groups[2]);
         gl.memoryBarrier(gl.SHADER_STORAGE_BARRIER_BIT)
         gl.memoryBarrier(gl.SHADER_IMAGE_ACCESS_BARRIER_BIT);
@@ -170,6 +176,10 @@ class CSKernel {
         return this;
     }
 
+    // run(arg0, arg1, ..., argn)
+    // run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z)
+    // run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z, {uniform_name:uniform[0,1,2,3]})
+    // run(arg0, arg1, ..., argn, {uniform_name:uniform[0,1,2,3]})
     updateArgments(args) {
         let nargs = this.settings.params.all.length;
         this.vids = this.vids || Array.from({length: nargs}, (v, i) => null);
@@ -234,7 +244,7 @@ class WebCS {
         }
     }
     createShaderFromString(source, settings = {}) {
-        let local_size = settings.local_size;
+        let local_size = settings.local_size || [8, 8, 1];
         // clang-format off
         let local_size_str = `#version 310 es
         #define LOCAL_SIZE_X ${local_size[0]}u
@@ -537,6 +547,11 @@ class WebCS {
         } else {
             return this.createShaderFromFunction(source, settings);
         }
+    }
+
+    addFunctions(func) {
+        this.glsl_functions = this.glsl_functions || '';
+        this.glsl_functions += func;
     }
 
     present(tex) {

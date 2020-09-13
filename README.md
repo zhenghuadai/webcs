@@ -6,6 +6,10 @@ Library for WebGL2-Compute
 
 http://zhenghuadai.github.io/webCS.html
 
+## Practise
+
+http://blog.biosuefi.com/webCS.html#practise
+
 ## Tutorials
 ### Enable WebGL 2.0 Compute in Chrome
     chrome://flags/#enable-webgl2-compute-context
