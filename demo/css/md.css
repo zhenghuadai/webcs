@@ -1,0 +1,49 @@
+h1{
+  counter-reset: zhang;           /* 重置计数器成0 */
+}
+h2:before {
+  counter-increment: zhang;      /* 增加计数器值 */
+  content: "第" counter(zhang) "章 "; /* 显示计数器 */
+}
+h2{
+    counter-reset: jie;
+}
+h3:before {
+ counter-increment: jie;
+ content: counter(zhang) "." counter(jie) " ";
+}
+
+tbody tr:nth-child(even){
+    background-color:#dddddd;
+}
+
+thead tr th{
+    background-color:#dddddd;
+}
+
+li.odd{
+    background: #f4f4f4;
+}
+
+li.even{
+    background: #f4f4f4;
+}
+
+ol.code{
+  margin: 10 0 0 0px;
+  border-left-style:solid;
+  border-left-width: 5px;
+  border-left-color:#0000ff;
+  background: #cccccc;
+  list-style-type: decimal;
+  padding-inline-start: 40px;
+}
+
+code {
+    display: block;
+    overflow: auto;
+    background: #f4f4f4;
+    padding: 0px 0px;
+    border: 1px solid #eee;
+    word-wrap:break-word; /* Internet Explorer 5.5+ */ 
+}

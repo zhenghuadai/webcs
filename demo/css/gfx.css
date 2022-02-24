@@ -1,0 +1,10 @@
+
+.stdsize{
+    width:640px;
+    height:480px;
+    display:inline;
+}
+.fullsize{
+    width:100%;
+    height:100%;
+}

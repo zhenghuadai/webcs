@@ -1,0 +1,628 @@
+<html>
+<head>
+<script src='./js/jquery-3.5.1.min.js'></script>
+<script src='./js/jquery-ui.min.js'></script>
+<script src='./demo.gl/js/webcs_gl.js'></script>
+<script src='./js/highlight.min.js'></script>
+<link rel='stylesheet' href='./css/jquery-ui.min.css' />
+<link rel='stylesheet' href='./css/highlight.min.css' />
+<script src="./js/codemirror/codemirror.js"></script>
+<script src="./js/codemirror/mode/javascript/javascript.js"></script>
+<script src="./js/codemirror/mode/clike/clike.js"></script>
+<script src="./js/codemirror/format.js"></script>
+<link rel="stylesheet" href="./js/codemirror/codemirror.css">
+<style>
+.ui-menu { width: 150px; }
+#menus .top-menu {
+    display:inline;
+    float:left;
+}
+#menus .top-menu-right {
+    display:inline;
+    float:right;
+}
+#display0{
+    margin-top:40px;
+    display:block;
+    position:absolute;
+}
+#image000{
+    margin:0;
+}
+#messagebox{
+    background: gray;
+    color:white;
+}
+.stdsize{
+    width:640px;
+    height:480px;
+    display:inline;
+}
+.cssize{
+    width:512px;
+    height:512px;
+    display:inline;
+}
+.fullsize{
+    width:100%;
+    height:100%;
+}
+#display1{
+    margin:80 40 0 0;
+    padding:0 80 0 0;
+    display:block;
+    position:absolute;
+    background: black;
+    color:white;
+}
+.code{
+    background: black;
+    color:white;
+}
+xmp.code{
+    margin:10 40 0 40;
+    background: white;
+    color:blue;
+}
+.minimize{
+width:10;
+height:10;
+text-overflow:ellipsis; overflow:hidden; 
+}
+</style>
+</head>
+<body>
+
+<div id='body'>
+    <div id='menus'>
+        <div class='top-menu' style='display:inline'>
+            <ul id='filemenu'>
+                <li> <div>file</div>
+                <ul>
+                    <li>
+                        <div id='loadimg'> Open </div>
+                        <input id='loadlocal' type='file' style='display:none'> 
+                    </li>
+
+                    <li class='ui-state-disabled'><div>Close</div></li>
+                </ul>
+                </li>
+            </ul>
+        </div>
+        <div class='top-menu' style='display:none'>
+            <ul id='viewmenu'>
+                <li> <div>view</div>
+                    <ul id='view_menus'>
+                    <li data-filter='full' cmd=0><div>full size</div></li>
+                    <li data-filter='640x480' cmd=1><div>640x480</div></li>
+                    <li data-filter='512x512' cmd=1><div>512x512</div></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        <div class='top-menu'>
+            <ul id='examplemenu'>
+                <li> <div>example</div>
+                    <ul id='example_menus'>
+                        <!-- 
+                            <li data-filter='grayscale'><div>grayscale</div></li> 
+                        -->
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        <div class='top-menu' style='margin-left:200'>
+            <div id='messageboxdiv'>
+            <label id="messagebox" class='ui-corner-all'></label>
+            </div>
+        </div>
+        <div class='top-menu-right' >
+            <div id='github'> <a href='https://github.com/zhenghuadai/webcs' target="_blank">
+<svg height="32" class="octicon octicon-mark-github text-white" viewBox="0 0 16 16" version="1.1" width="32" aria-hidden="true"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+              </a>
+           </div>
+        </div>
+        <div class='top-menu-right' style='display:none'>
+            <label for="AddonToggleButton" title='Use last output as input'>Add On</label>
+            <input type="checkbox" id="AddonToggleButton" />
+        </div>
+        <div class='top-menu-right' >
+            <label for="GPUToggleButton">Practice</label>
+            <input type="checkbox" id="GPUToggleButton" />
+        </div>
+        <div class='top-menu-right' >
+            <div id='timediv'> <label id="time">0</label> ms </div>
+        </div>
+        <!-- 
+        <div class='top-menu-right' >
+            <div id='TestGPU'> <label >Test</label> </div>
+        </div>
+        -->
+
+    </div>
+    <div id='thumb'>
+    </div>
+    <div id='display1' style='display:block'>
+        <div id='code_div'>
+            <xmp width="100%" class='code'>
+              <script src='http://zhenghuadai.github.io/js/webcs.js'></script>               
+            </xmp>
+            <pre id='codes_block' class="prettyprint">
+              <!--
+              <code id='code_smm_naive' class='code example language-javascript'></code>
+              -->
+            </pre>
+        </div>
+
+		<div id='practice_div'>
+            <br/>
+            <div>GLSL:</div>
+			<textarea id="practiseglsl" style="display: none;">
+function glsl_invert(src, dst){
+    return `
+    // 1. Get the Index
+    ivec2 pos = ivec2(thread.xy);
+    // 2. Get the input pixel form src
+    vec4 pixel = src[pos.y][pos.x]; 
+    // 3. Invert the pixel
+    vec4 invert = vec4(1.0 - pixel.x, 1.0 - pixel.y, 1.0 - pixel.z, 1.0);
+    // 4. Store the pixel into dst
+    dst[pos.y][pos.x] = invert;     
+    `;
+}
+			</textarea>
+            <br/>
+            <div>JavaScript:</div>
+			<textarea id="practisejs" style="display: none;">
+//1. Create instance of WebCS from canvas
+let webCS = new WebCS({canvas:$("#canvas2GPU")[0]}); //let webCS = new WebCS({width:512, height:512});
+
+//2. Create shader object
+let cs_texture2 = webCS.createShader(glsl_invert, { local_size:[8, 8, 1], params:{src:'texture', 'dst':'texture'}});
+
+//3. dispatch the shader
+let texSrc = $('#image000')[0];
+cs_texture2.setGroups(512/8, 512/8, 1).run(texSrc, null);
+
+//4. get the texture of dst
+let tex = cs_texture2.getTexture('dst');
+
+//5. draw the dst image to webCS.canvas
+webCS.present(tex);
+
+//6. show the canvas
+$("#display1")[0].appendChild(webCS.canvas);
+			</textarea>
+
+            <div id='run_practise'> <label id="run_practise_lable">Execute</label></div>
+		</div>
+
+        <div id='canvas_div'>
+          <canvas id='canvas2GPU' class='canvas display1' title0='GPU Canvas' width=512 height=512></canvas>
+        </div>
+    </div>
+    <div id='display0' style='display:none'>
+        <img id='image000' class='image display0 cssize' src='images/lenna.png' title0='Source Image' style='display:block'/>
+        <canvas id='canvasimg0' class='image display0' style='display:block'></canvas>
+    </div>
+
+    <script>
+
+    let webCS = null;
+    let cs_smm_naive = null;
+    let cs_texture = null;
+    let cs_img_dwt = null;
+    let cs_kernels = {};
+    let glsl_kernels = {};
+    let do_cs = {}
+    let App = {};
+    var X = 512, Y = 512, Z = 1;
+    (function(){
+        let testcases = [
+                'smm_naive', 'texture', 'texture2', 'img_texture', 'img_dwt', 'histogram'
+        ];
+        // clang-format off
+        function glsl_smm_naive(A,B,C){
+                return `
+                    // C[M, N] = A[M, K] * B[K, N]
+                    uint M = this.uniform.MNK.x, N = this.uniform.MNK.y, K = this.uniform.MNK.z;
+                    // Compute a single element C[thread.y, thread.x] by looping over k
+                    float sum = 0.0;
+                    for (uint k = 0u; k < K; k++)
+                    {
+                        sum += A[thread.y * K + k] * B[k * N + thread.x];
+                    }
+             
+                    // Store the result
+                    C[thread.y*N + thread.x] = sum;
+                `;
+            }
+
+        function glsl_texcopy(src, dst){
+                return `
+                dst[thread.y][thread.x] = src[thread.y][thread.x];     
+                `;
+            }
+        function glsl_texture2(src, dst){
+                return `
+                ivec2 pos = ivec2(thread.xy);
+                // vec4 pixel = imageLoad(src, pos); or vec4 pixel = src[pos]
+                vec4 pixel = src[pos.y][pos.x]; 
+                vec4 invert = vec4(1.0 - pixel.x, 1.0 - pixel.y, 1.0 - pixel.z, 1.0);
+                // imageStore(dst, pos, invert); or dst[pos] = invert;
+                dst[pos.y][pos.x] = invert;     
+                `;
+            }
+        function glsl_texture(dst){
+                return `
+                ivec2 pos = ivec2(thread.xy);
+                float x = float(thread.x);
+                float y = float(thread.y);
+                //imageStore(dst, pos, vec4(x / (y+1.0+x), y / (y+1.0+x),  0.0, 1.0));
+                dst[thread.y][thread.x] =  vec4(x / (y+1.0+x), y / (y+1.0+x),  0.0, 1.0);
+                `;
+            }
+        function glsl_img_dwt(src, dst){
+                return `
+                function int YSize(){ return int(gl_NumWorkGroups.y*LOCAL_SIZE_Y);}
+                function int XSize(){ return int(gl_NumWorkGroups.x*LOCAL_SIZE_X);} 
+                int x = int(thread.x);
+                int y = int(thread.y);
+                vec4 p00 = src[2*y + 0][2*x + 0];
+                vec4 p01 = src[2*y + 0][2*x + 1];
+                vec4 p10 = src[2*y + 1][2*x + 0];
+                vec4 p11 = src[2*y + 1][2*x + 1];
+                dst[y][x] = (p00 + p01 + p10 + p11) / 4.0;
+                dst[y][x + XSize()] = (p00 + p10 - p01 - p11) / 4.0;
+                dst[y + YSize()][x] = (p00 + p01 - p10 - p11) / 4.0;
+                dst[y + YSize()][x + XSize()] = (p00 + p11 - p01 - p10) / 4.0;
+                `;
+            }
+        function glsl_histogram(src, dst){
+                return `
+                vec4 pixel = src[thread.xy]; 
+                float gray = 0.2126 * pixel.r + 0.7152 * pixel.g + 0.0722 * pixel.b;
+                int grayu = int(floor(gray * 255.0));
+                grayu = grayu & 255;
+                dst[grayu] = dst[grayu] + 1.0;
+                //int ru = int(floor(pixel.r*255.0));
+                //int gu = int(floor(pixel.g*255.0));
+                //int bu = int(floor(pixel.b*255.0));
+                //dst[ru + 256] = dst[ru+256] + 1.0;
+                //dst[gu + 256*2] = dst[gu+256*2] + 1.0;
+                //dst[bu + 256*3] = dst[bu+256*3] + 1.0;
+                `;
+        }
+        function glsl_replace(src, dst, histo){
+                return `
+                vec4 pixel = src[thread.xy]; 
+                float gray = 0.2126 * pixel.r + 0.7152 * pixel.g + 0.0722 * pixel.b;
+                int grayu = int(floor(gray * 255.0));
+                grayu = grayu & 255;
+                float new_gray = histo[grayu];
+                float diff_gray = new_gray - gray;
+                vec4 new_pixel = vec4(pixel.r + diff_gray * 0.2126, pixel.g + diff_gray * 0.7152, pixel.b + diff_gray * 0.0722, 1.0);
+                dst[thread.xy] = new_pixel;
+                `;
+        }
+        // clang-format on
+        glsl_kernels.smm_naive = glsl_smm_naive;
+        glsl_kernels.texture     = glsl_texture;
+        glsl_kernels.texture2    = glsl_texture2;
+        glsl_kernels.img_texture    = glsl_texture2;
+        glsl_kernels.img_dwt        = glsl_img_dwt;
+        glsl_kernels.histogram      = glsl_histogram;
+
+    // menus for example 
+    (function() {
+
+        // append menus
+        (function appendmenu() {
+            function doone(thefilters, themenu) {
+                let ula = $('<ul/>');
+                thefilters.forEach(function(ele) {
+                    ula.append(
+                        '<li data-filter=\'' + ele + '\'><div>' + ele +
+                        '</div></li>');
+                });
+                $(themenu).append(ula.children().detach());
+            }
+            doone(testcases, '#example_menus');
+        })();
+        do_cs.do_smm_naive = function (kernel_name){
+            var M = 64, N = 64, K = 64;
+            var createArray= function ( n) { 
+                var buf = new Float32Array(n);
+                for(var i = 0; i < n; i++){
+                    buf[i] = Math.random();
+                }
+                return buf;
+            };
+            let cpuA = createArray(M*K);
+            let cpuB = createArray(K*N);
+            let cpuC = createArray(M*N);
+            if(cs_smm_naive == null){
+                cs_smm_naive = webCS.createShader(glsl_smm_naive, { local_size:[8, 8, 1], groups:[M/8, N/8, 1]});
+            }
+
+            const t0 = performance.now();
+            //cs_smm_naive.setUniform('MNK', M, N, K, 0).run(cpuA, cpuB, cpuC);
+            cs_smm_naive.run(cpuA, cpuB, cpuC, {'MNK':[M,N,K,0]});
+            const t1 = performance.now();
+            t = t1 - t0;
+            $('#time').html(t.toFixed(1).toString());
+            if(true){
+                let acc = 0, x = Math.floor(N*Math.random()),  y = Math.floor(N*Math.random());
+                for(let k=0; k<K; k++) acc += cpuA[y*K + k] * cpuB[k*N + x]
+                cs_smm_naive.getData('C', cpuC);
+                let result = cpuC[y*N+x];
+                let diff = result - acc;
+                result = result.toFixed(7);
+                diff = diff.toFixed(7);
+                App.showMessage(`Cgpu[${y},${x}] = ${result}; \u2003<br/> Cgpu[${y},${x}] - Ccpu[${y},${x}] : ${diff}`);
+            }
+            $("#code_smm_naive").show();
+
+        };
+        do_cs.do_texture = function(kernel_name){
+                //ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
+                //imageStore(dst, storePos, vec4(vec2(gl_WorkGroupID.xy) / vec2(gl_NumWorkGroups.xy), 0.0, 1.0));
+            if(cs_texture == null){
+                cs_texture = webCS.createShader(glsl_texture, { local_size:[8, 8, 1], groups:[X/8, Y/8, 1], params:{'dst':'texture'}});
+            }
+
+            cs_texture.run(null);
+
+            let tex = cs_texture.getTexture('dst');
+            webCS.present(tex);
+            $("#display1")[0].appendChild(webCS.canvas);
+            $("#canvas2GPU").show();
+        };
+
+        do_cs.do_texture2= function(kernel_name){
+            do_cs.do_texture();
+            if(cs_kernels['texture2'] == null){
+                cs_kernels['texture2'] = webCS.createShader(glsl_texture2, { local_size:[8, 8, 1], groups:[X/8, Y/8, 1], params:{src:'[][]', 'dst':'rgba8[][]'}});
+            }
+
+            let texSrc = cs_texture.getTexture('dst');
+            cs_kernels['texture2'].run(texSrc, null);
+
+            let tex = cs_kernels['texture2'].getTexture('dst');
+            webCS.present(tex);
+            $("#display1")[0].appendChild(webCS.canvas);
+            $("#canvas2GPU").show();
+        };
+
+        do_cs.do_img_dwt = function(kernel_name){
+            if(cs_kernels.cs_img_dwt  == null){
+                cs_kernels.cs_img_dwt  = webCS.createShader(glsl_img_dwt, { local_size:[8, 8, 1], groups:[X/16, Y/16, 1], params:{src:'texture', 'dst':'texture'}});
+            }
+            if(cs_kernels.cs_texcopy == null){
+                cs_kernels.cs_texcopy = webCS.createShader(glsl_texcopy, { local_size:[8, 8, 1], groups:[X/8, Y/8, 1], params:{src:'[][]', 'dst':'rgba8[][]'}});
+            }
+
+            let texSrc = $('#image000')[0];
+            let texDst1 = webCS.createTexture();
+            let texDst2 = webCS.createTexture();
+            cs_kernels.cs_img_dwt.setGroups(X/16, Y/16, 1).run(texSrc, texDst1);
+            // copy the LL0 to texDst1
+            cs_kernels.cs_texcopy.setGroups(X/16, Y/16, 1).run(texDst1, texDst2);
+            // DWT the LL0
+            cs_kernels.cs_img_dwt.run(texDst2, texDst1, X/32, Y/32, 1);
+
+            let tex = cs_kernels.cs_img_dwt.getTexture('dst');
+            webCS.present(tex);
+            $("#display1")[0].appendChild(webCS.canvas);
+            $("#canvas2GPU").show();
+        };
+
+
+        do_cs.do_img_texture = function(kernel_name){
+            if(cs_kernels['texture2'] == null){
+                cs_kernels['texture2'] = webCS.createShader(glsl_texture2, { local_size:[8, 8, 1], groups:[X/8, Y/8, 1], params:{src:'texture', 'dst':'texture'}});
+            }
+
+            let texSrc = $('#image000')[0];
+            cs_kernels['texture2'].run(texSrc, null);
+
+            let tex = cs_kernels['texture2'].getTexture('dst');
+            webCS.present(tex);
+            $("#display1")[0].appendChild(webCS.canvas);
+            $("#canvas2GPU").show();
+        };
+
+        do_cs.do_histogram = function(kernel_name){
+            if(cs_kernels['histogram '] == null){
+                cs_kernels['histogram '] = webCS.createShader(glsl_histogram, { local_size:[8, 8, 1], groups:[X/8, Y/8, 1], params:{src:'texture', 'dst':'float[]'}});
+            }
+            let texSrc = $('#image000')[0];
+            let bufHis = webCS.createBuffer(256*4*4);
+            cs_kernels['histogram '].run(texSrc, bufHis);
+
+            let histogram = cs_kernels['histogram '].getData('dst', 'float');
+            for(let ii = 1; ii < 256; ii++){
+                   histogram[ii] = histogram[ii-1] + histogram[ii];
+            }
+            let cdf0 = 0, cdf1 = histogram[255];
+            let newColor = new Float32Array(256);
+            for(let ii = 0; ii < 256; ii++){
+                if(histogram[ii] == 0){
+                    continue;
+                }
+                if(cdf0 == 0){
+                    cdf0 = histogram[ii];
+                }
+                newColor[ii] = (histogram[ii] - cdf0) / (cdf1 - cdf0)  * 255.0 / 255.0;
+            }
+            console.log(histogram);
+
+            if(cs_kernels['replace'] == null){
+                cs_kernels['replace'] = webCS.createShader(glsl_replace, { local_size:[8, 8, 1], groups:[X/8, Y/8, 1], params:{src:'texture', 'dst':'texture', histo:'float[]'}});
+            }
+            cs_kernels['replace'].run(texSrc, null, newColor);
+            let tex = cs_kernels['replace'].getTexture('dst');
+            webCS.present(tex);
+            $("#display1")[0].appendChild(webCS.canvas);
+            $("#canvas2GPU").show();
+        };
+
+        function doExampleGPU(e, ui) {
+            let myfilter = ui.item.attr('data-filter');
+            $(".code.example").hide();
+            $("#canvas2GPU").hide();
+            $("#code_"+myfilter).show();
+            do_cs["do_" + myfilter](myfilter);
+        }
+        function doExample(e, ui) {
+            let myfilter = ui.item.attr('data-filter');
+            if(webCS == null){
+                webCS = new WebCS({canvas:$("#canvas2GPU")[0]});
+                //webCS = new WebCS();
+            }
+            if(myfilter == null){
+                return;
+            }
+            disablePractice();
+		    doExampleGPU(e, ui);
+        }
+
+        function disablePractice(){
+            $('#GPUToggleButton').prop("checked", true);
+            $('#GPUToggleButton').click();
+            $("#practice_div").hide();
+            $("#code_div").show();
+        }
+        $('#examplemenu').menu({select: doExample});
+
+    })();
+        
+    (function setupExample(){
+        let example_js= {}
+            // clang-format off
+        example_js.smm_naive = `
+        let M = 64, N = 64, K =64;
+        var createArray = function ( n) { 
+            var buf = new Float32Array(n);
+            for(var i = 0; i < n; i++){buf[i] = Math.random();}
+            return buf;
+        };
+        let cpuA = createArray(M*K);
+        let cpuB = createArray(K*N);
+        let cpuC = createArray(M*N);
+        let webCS = new WebCS();
+        let cs_smm = webCS.createShader(glsl_smm_naive, {local_size:[8, 8, 1], groups:[M/8, N/8, 1]});
+        cs_smm.setUniform('MNK', M, N, K, 0).run(cpuA, cpuB, cpuC);
+        // or
+        // cs_smm_naive.run(cpuA, cpuB, cpuC, {'MNK':[M,N,K,0]});
+        cs_smm.getData('C', cpuC);
+            `;
+
+        // clang-format on
+        example_js.texture = `
+        var X = 512, Y = 512, Z = 1;
+        let webCS = new WebCS({width:X, height:Y});
+        // or let webCS = new WebCS({canvas:$("#canvas2GPU")[0]});
+        let cs_texture = webCS.createShader(glsl_texture, { local_size:[8, 8, 1], groups:[X/8, Y/8, 1], params:{'dst':'texture'}});
+
+        cs_texture.run(null);
+
+        let tex = cs_texture.getTexture('dst');
+        webCS.present(tex);
+        $("#display1")[0].appendChild(webCS.canvas);
+        `;
+
+        example_js.texture2 = `
+        cs_texture().run(null); // to gerenate a texture
+        var X = 512, Y = 512, Z = 1;
+        let webCS = new WebCS({width:X, height:Y});
+        // or let webCS = new WebCS({canvas:$("#canvas2GPU")[0]});
+        let cs_texture2 = webCS.createShader(glsl_texture2, { local_size:[8, 8, 1], groups:[X/8, Y/8, 1], params:{src:'texture', 'dst':'texture'}});
+
+        let texSrc = cs_texture.getTexture('dst');
+        cs_texture2.run(texSrc, null);
+
+        let tex = cs_texture2.getTexture('dst');
+        webCS.present(tex);
+        $("#display1")[0].appendChild(webCS.canvas);
+        `;
+
+        example_js.img_texture= `
+        var X = 512, Y = 512, Z = 1;
+        let webCS = new WebCS({width:X, height:Y});
+        // or let webCS = new WebCS({canvas:$("#canvas2GPU")[0]});
+        let cs_texture2 = webCS.createShader(glsl_texture2, { local_size:[8, 8, 1], groups:[X/8, Y/8, 1], params:{src:'texture', 'dst':'texture'}});
+
+        let texSrc = $('#image000')[0];
+        cs_texture2.run(texSrc, null);
+
+        let tex = cs_texture2.getTexture('dst');
+        webCS.present(tex);
+        $("#display1")[0].appendChild(webCS.canvas);
+        `;
+        //$("#code_smm_naive").hide();
+        let codes_block = $('#codes_block');
+        testcases.forEach(function(ele) {
+            let code_ele = $(`<code id='code_${ele}' class='code example language-javascript'></code>`)
+            let btf = hljs.highlight('c++', glsl_kernels[ele].toString());
+            let btf2 = hljs.highlight('javascript', example_js[ele] || do_cs['do_'+ele].toString());
+            code_ele.html( btf.value + '<br/><br/>        ' + btf2.value.replace('glsl_'+ele, '<span class="hljs-title">glsl_'+ ele +'</span>'));
+            codes_block.append(code_ele);
+        });
+        $(".code.example").hide();
+        $("#code_smm_naive").show();
+    })();
+        
+
+    })();
+
+
+$(function(){
+
+	var editorglsl = CodeMirror.fromTextArea(document.getElementById("practiseglsl"), {
+		lineNumbers: true,
+		mode: "text/x-c++src",
+		matchBrackets: true
+	});
+	var editorjs = CodeMirror.fromTextArea(document.getElementById("practisejs"), {
+		lineNumbers: true,
+		mode: "javascript",
+		matchBrackets: true
+	});
+    $('#run_practise').button(); 
+    $('#run_practise').click(
+       function(){
+           formatall(editorglsl);
+           formatall(editorjs);
+	       let test_str = editorglsl.getValue() + "\n" + editorjs.getValue();
+           eval(test_str);
+       }
+    ); 
+
+    function formatall(editor){
+        let oldSize = editorglsl.getScrollInfo()
+        var totalLines = editor.lineCount();  
+        editor.autoFormatRange({line:0, ch:0}, {line:totalLines});
+        editorglsl.setSize(oldSize.width, oldSize.height);
+    }
+    function setPractice(){
+        if ($('#GPUToggleButton').is(':checked')) {
+            $("#practice_div").show();
+            $("#code_div").hide();
+        } else {
+            $("#practice_div").hide();
+            $("#code_div").show();
+        }
+    }
+    if(document.location.hash === '#practise')
+    {
+        $('#GPUToggleButton').prop("checked", true);
+    }
+    setPractice();
+    $('#GPUToggleButton').click(setPractice);
+});
+    </script>
+<script src='./demo.gl/js/webcs_gl.html.js'></script>
+</div>
+</body>
+</html>

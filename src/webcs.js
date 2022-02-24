@@ -1,4 +1,3 @@
-(function(win) {
 function _isString(arg)
 {
 	return typeof arg === 'string';
@@ -1173,5 +1172,4 @@ class WebCS
 		return dstarray;
 	}
 };
-win.WebCS = WebCS;
-})(window);
+export {WebCS};
