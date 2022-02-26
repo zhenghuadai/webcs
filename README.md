@@ -2,6 +2,13 @@
 
 Library for WebGPU-Compute
 
+## Build and Run
+- npm install
+- npm run dev
+ -   > Local:    https://localhost:3000/
+ -   > Network:  https://192.168.2.3:3000/
+Note: Must enable *https*, otherwise webgpu won't work
+
 ## Demo
 
 http://zhenghuadai.github.io/webcs.html
