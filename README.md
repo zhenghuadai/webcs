@@ -5,17 +5,20 @@ Library for WebGPU-Compute
 ## Build and Run
 - npm install
 - npm run dev
- -   > Local:    https://localhost:3000/
- -   > Network:  https://192.168.2.3:3000/
+```shell
+   > Local:    https://localhost:3000/
+   > Network:  https://192.168.2.3:3000/
+```
+Open the above URL in Chrome canary. 
 Note: Must enable *https*, otherwise webgpu won't work
 
 ## Demo
 
-http://zhenghuadai.github.io/webcs.html
+https://zhenghuadai.github.io/webcs.html
 
 ## Practise
 
-http://blog.biosuefi.com/webcs.html#practise
+https://blog.biosuefi.com/webcs.html#practise
 
 ## Tutorials
 ### Enable WebGPU in Chrome
