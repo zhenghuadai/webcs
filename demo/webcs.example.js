@@ -1,6 +1,8 @@
 import {App} from '/js/webCS.html.js'
-
 import {WebCS} from '../src/webcs.js'
+import {displayMatrix} from './matrix.js'
+import './matrix.css'
+
 
 let webCS        = null;
 let cs_smm_naive = null;
@@ -123,172 +125,176 @@ gpu_kernels.histogram   = gpu_histogram;
 })();
 do_cs.do_smm_naive = async function(kernel_name) {
     // cpuC = cpuA * cpuB
-	var M = 64, N = 64, K = 64;
-	var createArray = function(n) {
-		var buf = new Float32Array(n);
-		for (var i = 0; i < n; i++)
-		{
-			buf[i] = Math.random();
-		}
-		return buf;
-	};
-	let cpuA = createArray(M * K);
-	let cpuB = createArray(K * N);
-	let cpuC = createArray(M * N);
-	if (cs_smm_naive == null)
-	{
-		cs_smm_naive = webCS.createShader(gpu_smm_naive, { local_size: [8, 8, 1], groups: [M / 8, N / 8, 1] });
-	}
+    var M = 64, N = 64, K = 64;
+    var createArray = function(n) {
+        var buf = new Float32Array(n);
+        for (var i = 0; i < n; i++)
+        {
+            buf[i] = Math.random();
+        }
+        return buf;
+    };
+    let cpuA = createArray(M * K);
+    let cpuB = createArray(K * N);
+    let cpuC = createArray(M * N);
+    if (cs_smm_naive == null)
+    {
+        cs_smm_naive = webCS.createShader(gpu_smm_naive, { local_size: [8, 8, 1], groups: [M / 8, N / 8, 1] });
+    }
 
-	const t0 = performance.now();
-	await cs_smm_naive.run(cpuA, cpuB, cpuC, { 'MNK': [M, N, K, 0] });
-	const t1 = performance.now();
-	let t    = t1 - t0;
-	$('#time').html(t.toFixed(1).toString());
-	if (true) // Check result
-	{
-		let acc = 0, x = Math.floor(N * Math.random()), y = Math.floor(N * Math.random());
-		for (let k = 0; k < K; k++)
-			acc += cpuA[y * K + k] * cpuB[k * N + x];
-		cpuC       = await cs_smm_naive.getData('C', 'float');
-		let result = cpuC[y * N + x];
-		let diff   = result - acc;
-		result     = result.toFixed(7);
-		diff       = diff.toFixed(7);
-		App.showMessage(`Cgpu[${y},${x}] = ${result}; \u2003<br/> Cgpu[${y},${x}] - Ccpu[${y},${x}] : ${diff}`);
-	}
-	$('#code_smm_naive').show();
+    const t0 = performance.now();
+    await cs_smm_naive.run(cpuA, cpuB, cpuC, { 'MNK': [M, N, K, 0] });
+    const t1 = performance.now();
+    let t    = t1 - t0;
+    $('#time').html(t.toFixed(1).toString());
+    if (true) // Check result
+    {
+        let acc = 0, x = Math.floor(N * Math.random()), y = Math.floor(N * Math.random());
+        for (let k = 0; k < K; k++)
+            acc += cpuA[y * K + k] * cpuB[k * N + x];
+        cpuC       = await cs_smm_naive.getData('C', 'float');
+        let result = cpuC[y * N + x];
+        let diff   = result - acc;
+        result     = result.toFixed(7);
+        diff       = diff.toFixed(7);
+        App.showMessage(`Cgpu[${y},${x}] = ${result}; \u2003<br/> Cgpu[${y},${x}] - Ccpu[${y},${x}] : ${diff}`);
+        displayMatrix(cpuA, 'gpuA', $('#data0_div')[0], M, K);
+        displayMatrix(cpuB, 'gpuB', $('#data1_div')[0], K, K);
+        displayMatrix(cpuC, 'gpuC', $('#data2_div')[0], M, N);
+        $('#data_div').show();
+    }
+    $('#code_smm_naive').show();
 };
 do_cs.do_texture = async function(kernel_name) {
-	//ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
-	//imageStore(dst, storePos, vec4(vec2(gl_WorkGroupID.xy) / vec2(gl_NumWorkGroups.xy), 0.0, 1.0));
-	if (cs_texture == null)
-	{
-		cs_texture = webCS.createShader(
-		    gpu_texture, { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { 'dst': 'texture' } });
-	}
+    //ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
+    //imageStore(dst, storePos, vec4(vec2(gl_WorkGroupID.xy) / vec2(gl_NumWorkGroups.xy), 0.0, 1.0));
+    if (cs_texture == null)
+    {
+        cs_texture = webCS.createShader(
+            gpu_texture, { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { 'dst': 'texture' } });
+    }
 
-	await cs_texture.run(null);
+    await cs_texture.run(null);
 
-	let tex = cs_texture.getTexture('dst');
-	webCS.present(tex);
-	$('#display1')[0].appendChild(webCS.canvas);
-	$('#canvas2GPU').show();
+    let tex = cs_texture.getTexture('dst');
+    webCS.present(tex);
+    $('#display1')[0].appendChild(webCS.canvas);
+    $('#canvas2GPU').show();
 };
 
 do_cs.do_texture2 = async function(kernel_name) {
-	do_cs.do_texture();
-	if (cs_kernels['texture2'] == null)
-	{
-		cs_kernels['texture2'] = webCS.createShader(
-		    gpu_texture2,
-		    { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: '[][]', 'dst': 'rgba8[][]' } });
-	}
+    do_cs.do_texture();
+    if (cs_kernels['texture2'] == null)
+    {
+        cs_kernels['texture2'] = webCS.createShader(
+            gpu_texture2,
+            { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: '[][]', 'dst': 'rgba8[][]' } });
+    }
 
-	let texSrc = cs_texture.getTexture('dst');
-	await cs_kernels['texture2'].run(texSrc, null);
+    let texSrc = cs_texture.getTexture('dst');
+    await cs_kernels['texture2'].run(texSrc, null);
 
-	let tex = cs_kernels['texture2'].getTexture('dst');
-	webCS.present(tex);
-	$('#display1')[0].appendChild(webCS.canvas);
-	$('#canvas2GPU').show();
+    let tex = cs_kernels['texture2'].getTexture('dst');
+    webCS.present(tex);
+    $('#display1')[0].appendChild(webCS.canvas);
+    $('#canvas2GPU').show();
 };
 
 do_cs.do_img_dwt = async function(kernel_name) {
-	if (cs_kernels.cs_img_dwt == null)
-	{
-		cs_kernels.cs_img_dwt = webCS.createShader(
-		    gpu_img_dwt,
-		    { local_size: [8, 8, 1], groups: [X / 16, Y / 16, 1], params: { src: 'texture', 'dst': 'texture' } });
-	}
-	if (cs_kernels.cs_texcopy == null)
-	{
-		cs_kernels.cs_texcopy = webCS.createShader(
-		    gpu_texcopy, { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: '[][]', 'dst': '[][]' } });
-	}
+    if (cs_kernels.cs_img_dwt == null)
+    {
+        cs_kernels.cs_img_dwt = webCS.createShader(
+            gpu_img_dwt,
+            { local_size: [8, 8, 1], groups: [X / 16, Y / 16, 1], params: { src: 'texture', 'dst': 'texture' } });
+    }
+    if (cs_kernels.cs_texcopy == null)
+    {
+        cs_kernels.cs_texcopy = webCS.createShader(
+            gpu_texcopy, { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: '[][]', 'dst': '[][]' } });
+    }
 
-	let texSrc  = $('#image000')[0];
-	let texDst1 = webCS.createTexture();
-	let texDst2 = webCS.createTexture();
-	await (cs_kernels.cs_img_dwt.setGroups(X / 16, Y / 16, 1)).run(texSrc, texDst1);
-	// copy the LL0 to texDst1
-	await (cs_kernels.cs_texcopy.setGroups(X / 16, Y / 16, 1)).run(texDst1, texDst2);
-	// DWT the LL0
-	await cs_kernels.cs_img_dwt.run(texDst2, texDst1, X / 32, Y / 32, 1);
+    let texSrc  = $('#image000')[0];
+    let texDst1 = webCS.createTexture();
+    let texDst2 = webCS.createTexture();
+    await (cs_kernels.cs_img_dwt.setGroups(X / 16, Y / 16, 1)).run(texSrc, texDst1);
+    // copy the LL0 to texDst1
+    await (cs_kernels.cs_texcopy.setGroups(X / 16, Y / 16, 1)).run(texDst1, texDst2);
+    // DWT the LL0
+    await cs_kernels.cs_img_dwt.run(texDst2, texDst1, X / 32, Y / 32, 1);
 
-	let tex = cs_kernels.cs_img_dwt.getTexture('dst');
-	webCS.present(tex);
-	$('#display1')[0].appendChild(webCS.canvas);
-	$('#canvas2GPU').show();
+    let tex = cs_kernels.cs_img_dwt.getTexture('dst');
+    webCS.present(tex);
+    $('#display1')[0].appendChild(webCS.canvas);
+    $('#canvas2GPU').show();
 };
 
 do_cs.do_img_texture = async function(kernel_name) {
-	if (cs_kernels['texture2'] == null)
-	{
-		cs_kernels['texture2'] = webCS.createShader(
-		    gpu_texture2,
-		    { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: 'texture', 'dst': 'texture' } });
-	}
+    if (cs_kernels['texture2'] == null)
+    {
+        cs_kernels['texture2'] = webCS.createShader(
+            gpu_texture2,
+            { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: 'texture', 'dst': 'texture' } });
+    }
 
-	let texSrc = $('#image000')[0];
-	await cs_kernels['texture2'].run(texSrc, null);
+    let texSrc = $('#image000')[0];
+    await cs_kernels['texture2'].run(texSrc, null);
 
-	let tex = cs_kernels['texture2'].getTexture('dst');
-	webCS.present(tex);
-	$('#display1')[0].appendChild(webCS.canvas);
-	$('#canvas2GPU').show();
+    let tex = cs_kernels['texture2'].getTexture('dst');
+    webCS.present(tex);
+    $('#display1')[0].appendChild(webCS.canvas);
+    $('#canvas2GPU').show();
 };
 
 do_cs.do_histogram = async function(kernel_name) {
     // 1. create histogram kernel
-	if (cs_kernels['histogram '] == null)
-	{
-		cs_kernels['histogram '] = webCS.createShader(
-		    gpu_histogram,
-		    { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: 'texture', 'dst': 'float[]' } });
-	}
-	let texSrc = $('#image000')[0];
-	let bufHis = webCS.createBuffer(256 * 4 * 4);
+    if (cs_kernels['histogram '] == null)
+    {
+        cs_kernels['histogram '] = webCS.createShader(
+            gpu_histogram,
+            { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: 'texture', 'dst': 'float[]' } });
+    }
+    let texSrc = $('#image000')[0];
+    let bufHis = webCS.createBuffer(256 * 4 * 4);
     // 2. run histogram kernel
-	await cs_kernels['histogram '].run(texSrc, bufHis);
+    await cs_kernels['histogram '].run(texSrc, bufHis);
 
     // 3. get new color based on histogram
-	let histogram = await cs_kernels['histogram '].getData('dst', 'float');
-	for (let ii = 1; ii < 256; ii++)
-	{
-		histogram[ii] = histogram[ii - 1] + histogram[ii];
-	}
-	let cdf0 = 0, cdf1 = histogram[255];
-	let newColor = new Float32Array(256);
-	for (let ii = 0; ii < 256; ii++)
-	{
-		if (histogram[ii] == 0)
-		{
-			continue;
-		}
-		if (cdf0 == 0)
-		{
-			cdf0 = histogram[ii];
-		}
-		newColor[ii] = (histogram[ii] - cdf0) / (cdf1 - cdf0) * 255.0 / 255.0;
-	}
-	console.log(histogram);
+    let histogram = await cs_kernels['histogram '].getData('dst', 'float');
+    for (let ii = 1; ii < 256; ii++)
+    {
+        histogram[ii] = histogram[ii - 1] + histogram[ii];
+    }
+    let cdf0 = 0, cdf1 = histogram[255];
+    let newColor = new Float32Array(256);
+    for (let ii = 0; ii < 256; ii++)
+    {
+        if (histogram[ii] == 0)
+        {
+            continue;
+        }
+        if (cdf0 == 0)
+        {
+            cdf0 = histogram[ii];
+        }
+        newColor[ii] = (histogram[ii] - cdf0) / (cdf1 - cdf0) * 255.0 / 255.0;
+    }
+    console.log(histogram);
 
     // 4. create replace kernel
-	if (cs_kernels['replace'] == null)
-	{
-		cs_kernels['replace'] = webCS.createShader(gpu_replace, {
-			local_size: [8, 8, 1],
-			groups: [X / 8, Y / 8, 1],
-			params: { src: 'texture', 'dst': 'texture', histo: 'float[]' }
-		});
-	}
+    if (cs_kernels['replace'] == null)
+    {
+        cs_kernels['replace'] = webCS.createShader(gpu_replace, {
+            local_size: [8, 8, 1],
+            groups: [X / 8, Y / 8, 1],
+            params: { src: 'texture', 'dst': 'texture', histo: 'float[]' }
+        });
+    }
     // 5. run replace  kernel with newColor
-	await cs_kernels['replace'].run(texSrc, null, newColor);
-	let tex = cs_kernels['replace'].getTexture('dst');
-	webCS.present(tex);
-	$('#display1')[0].appendChild(webCS.canvas);
-	$('#canvas2GPU').show();
+    await cs_kernels['replace'].run(texSrc, null, newColor);
+    let tex = cs_kernels['replace'].getTexture('dst');
+    webCS.present(tex);
+    $('#display1')[0].appendChild(webCS.canvas);
+    $('#canvas2GPU').show();
 };
 
 function doExampleGPU(e, ui)
@@ -296,6 +302,7 @@ function doExampleGPU(e, ui)
 	let myfilter = ui.item.attr('data-filter');
 	$('.code.example').hide();
 	$('#canvas2GPU').hide();
+	$('#data_div').hide();
 	$('#code_' + myfilter).show();
 	do_cs['do_' + myfilter](myfilter);
 }
