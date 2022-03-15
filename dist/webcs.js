@@ -7,19 +7,50 @@ function _isArray(arg)
 {
 	return Array.isArray(arg) || (ArrayBuffer.isView(arg) && !(arg instanceof DataView));
 }
+/** class for ComputeShader Kernel*/
 class CSKernel
 {
-	constructor(prog, settings = {})
+	/** Create a CSKernel 
+     *
+     * @param {WebCS} webCS - instance of WebCS
+     * @param {GPUShaderModule} prog - instance of GPUShaderModule  
+     * @param {{}} settings - settings
+     * @example
+     * let settings = {
+     *   "local_size":[8,8,1],
+     *   "groups":[8,8,1],
+     *   "params":{
+     *       "all":["A","B","C"],
+     *       "A":{"index":0,"type":{"type":"f32","dim":1}},
+     *       "B":{"index":1,"type":{"type":"f32","dim":1}},
+     *       "C":{"index":2,"type":{"type":"f32","dim":1}}},
+     *   "uniform":{"MNK":{"type":"vec4<u32>","fields":{},"x":1,"y":1,"z":1,"index":0}}
+     * };
+     * let kernel = new CSKernel(webCS, prog, settings);
+     */
+	constructor(webCS, prog, settings = {})
 	{
 		this.kernel          = prog;
 		this.local_size      = settings.local_size || [32, 1, 1];
 		this.groups          = settings.groups;
-		this.webCS           = settings.webCS;
+		this.webCS           = webCS;
 		this.vids            = null;
 		this.computePipeline = null;
 		this.settings        = settings;
 	};
 
+	/**
+     * Dispatch Compute Kernel
+     *
+     * @param {} arg -   a list of shader arguments, such as run(arg0, arg1, ..., argn)
+     * @param {unfold_of_vec3} groups_xyz - optional, the size of work group, such as run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z)
+     * @param {{}} uniform    - optional, uniform , such as run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z, {uniform_name:uniform[0,1,2,3]})
+     * @example
+     * run(arg0, arg1, ..., argn)
+     * run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z)
+     * run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z, {uniform_name:uniform[0,1,2,3]})
+     * run(arg0, arg1, ..., argn, {uniform_name:uniform[0,1,2,3]})
+     */
 	async run()
 	{
 		this.commandEncoder = this.webCS.gpuDevice.createCommandEncoder();
@@ -38,7 +69,7 @@ class CSKernel
 		{
 			passEncoder.setBindGroup(0, this.bindGroup);
 		}
-		if (this.getNumberOfUniform() > 0)
+		if (this.__getNumberOfUniform() > 0)
 		{
 			console.log(this.uniformBindGroup)
 			passEncoder.setBindGroup(1, this.uniformBindGroup);
@@ -49,8 +80,88 @@ class CSKernel
 		this.webCS.gpuDevice.queue.submit([gpuCommands]);
 		await this.webCS.gpuDevice.queue.onSubmittedWorkDone();
 	};
+	setUniform(name, ...rest)
+	{
+		let device = this.webCS.gpuDevice;
+		let values = rest; // [v0, 0, 0, 0];
+		//for (let i = 0; i < rest.length; i++)
+		//{
+		//    values[i + 1] = rest[i];
+		//}
+		let mytype = this.settings.uniform[name].type;
+		const slot = this.settings.uniform[name].index;
 
-	getNumberOfUniform()
+		let uniformValue = null;
+		if (mytype == 'vec4<u32>')
+		{
+			uniformValue = new Uint32Array(values);
+		}
+		else if (mytype == 'vec4<i32>')
+		{
+			uniformValue = new int32Array(values);
+		}
+		else if (mytype == 'vec4<f32>')
+		{
+			uniformValue = new Float32Array(values);
+		}
+		else
+		{
+			uniformValue = new Uint32Array(values);
+		}
+
+		let bufferSizeInBytes = 16;
+		if (this.uniformVids[slot] == null)
+		{
+			this.uniformVids[slot] = device.createBuffer({
+				mappedAtCreation: true,
+				size: bufferSizeInBytes,
+				usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+			});
+			const hostAccessBuffer = this.uniformVids[slot].getMappedRange();
+			new uniformValue.constructor(hostAccessBuffer).set(uniformValue);
+			this.uniformVids[slot].unmap();
+		}
+		else
+		{
+			device.queue.writeBuffer(
+			    this.uniformVids[slot], 0, uniformValue.buffer, uniformValue.byteOffset, uniformValue.byteLength);
+		}
+		return this;
+	};
+
+	getTexture(name)
+	{
+		return this.getBuffer(name);
+	};
+	getBuffer(name)
+	{
+		if (typeof name === 'string')
+		{
+			let findIndex = function(o, value) {
+				return o.indexOf(value);
+			};
+			let index = findIndex(this.settings.params.all, name);
+			return this.vids[index];
+		}
+		else if (typeof name === 'number')
+		{
+			return this.vids[name];
+		}
+	};
+
+	async getData(name, dstarray)
+	{
+		let vid = this.getBuffer(name);
+		return await this.webCS.getData(vid, dstarray);
+	};
+
+	setGroups(x, y = 1, z = 1)
+	{
+		this.groups = [x, y, z];
+		return this;
+	};
+
+	__getNumberOfUniform()
 	{
 		return this.settings.uniform ? Object.keys(this.settings.uniform).length : 0;
 	};
@@ -282,94 +393,6 @@ class CSKernel
 		return this.webCS.Str2SFmt[str] || 'rgba8unorm';
 	};
 
-	setUniform(name, ...rest)
-	{
-		let device = this.webCS.gpuDevice;
-		let values = rest; // [v0, 0, 0, 0];
-		//for (let i = 0; i < rest.length; i++)
-		//{
-		//	values[i + 1] = rest[i];
-		//}
-		let mytype = this.settings.uniform[name].type;
-		const slot = this.settings.uniform[name].index;
-
-		let uniformValue = null;
-		if (mytype == 'vec4<u32>')
-		{
-			uniformValue = new Uint32Array(values);
-		}
-		else if (mytype == 'vec4<i32>')
-		{
-			uniformValue = new int32Array(values);
-		}
-		else if (mytype == 'vec4<f32>')
-		{
-			uniformValue = new Float32Array(values);
-		}
-		else
-		{
-			uniformValue = new Uint32Array(values);
-		}
-
-		let bufferSizeInBytes = 16;
-		if (this.uniformVids[slot] == null)
-		{
-			this.uniformVids[slot] = device.createBuffer({
-				mappedAtCreation: true,
-				size: bufferSizeInBytes,
-				usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-			});
-			const hostAccessBuffer = this.uniformVids[slot].getMappedRange();
-			new uniformValue.constructor(hostAccessBuffer).set(uniformValue);
-			this.uniformVids[slot].unmap();
-		}
-		else
-		{
-			device.queue.writeBuffer(
-			    this.uniformVids[slot], 0, uniformValue.buffer, uniformValue.byteOffset, uniformValue.byteLength);
-		}
-		return this;
-	};
-
-	getTexture(name)
-	{
-		return this.getBuffer(name);
-	};
-	getBuffer(name)
-	{
-		if (typeof name === 'string')
-		{
-			let findIndex = function(o, value) {
-				return o.indexOf(value);
-			};
-			let index = findIndex(this.settings.params.all, name);
-			return this.vids[index];
-		}
-		else if (typeof name === 'number')
-		{
-			return this.vids[name];
-		}
-	};
-
-	bindBuffer(name)
-	{
-		var gl  = this.webCS.gl;
-		let vid = this.getBuffer(name);
-		gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, vid);
-	};
-
-	async getData(name, dstarray)
-	{
-		let vid = this.getBuffer(name);
-		return await this.webCS.getData(vid, dstarray);
-	};
-
-	setGroups(x, y = 1, z = 1)
-	{
-		this.groups = [x, y, z];
-		return this;
-	};
-
 	// run(arg0, arg1, ..., argn)
 	// run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z)
 	// run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z, {uniform_name:uniform[0,1,2,3]})
@@ -458,6 +481,9 @@ fn main(@builtin(global_invocation_id) thread: vec3<u32>) {
     csmain();
 }
 `;
+/**
+ *WebCS hosts the adapter, gpu device, canvas, and creates CSKernel
+ * */
 class WebCS
 {
 	/*private*/ constructor(adapter, device, settings = {})
@@ -482,6 +508,14 @@ class WebCS
 		//this.__setFmt();
 	};
 
+	/*
+     * Create WebCs object from adapter and device
+     * @example
+     *   let webCS = await WebCS.create({width:X, height:Y});
+     * @example
+     *   
+     *    let webCS = await WebCS.create({ canvas: $('#canvas2GPU')[0] });
+     */
 	static async create(settings = {})
 	{
 		const adapter = await navigator.gpu.requestAdapter();
@@ -494,59 +528,15 @@ class WebCS
 		return new WebCS(adapter, device, settings);
 	};
 
-	__setFmt()
-	{
-		// clang-format off
-		let fmts = [
-            // SFmt,       Fmt  ,        DataType, str
-			['rgba8unorm' , 'rgba8unorm' , 'f32', 'rgba8'],
-			['rgba8unorm' , 'rgba8unorm' , 'f32', 'rgba'],
-			['rgba8unorm' , 'rgba8unorm' , 'f32', 'rgba8unorm'],
-			['rgba8snorm' , 'rgba8snorm' , 'f32', 'rgba8snorm'],
-			['rgba8uint'  , 'rgba8uint'  , 'u32', 'rgba8uint'],
-			['rgba8sint'  , 'rgba8sint'  , 'i32', 'rgba8sint'],
-			['rgba16uint' , 'rgba16uint' , 'u32', 'rgba16uint'],
-			['rgba16sint' , 'rgba16sint' , 'i32', 'rgba16sint'],
-			['rgba16float', 'rgba16float', 'f32', 'rgba16float'],
-			['r32uint'    , 'r32uint'    , 'u32', 'r32uint'],
-			['r32sint'    , 'r32sint'    , 'i32', 'r32sint'],
-			['r32float'   , 'r32float'   , 'f32', 'r32float'],
-			['rg32uint'   , 'rg32uint'   , 'u32', 'rg32uint'],
-			['rg32sint'   , 'rg32sint'   , 'i32', 'rg32sint'],
-			['rg32float'  , 'rg32float'  , 'f32', 'rg32float'],
-			['rgba32uint' , 'rgba32uint' , 'u32', 'rgba32uint'],
-			['rgba32sint' , 'rgba32sint' , 'i32', 'rgba32sint'],
-			['rgba32float', 'rgba32float', 'f32', 'rgba32float'],
-		];
-		// clang-format on
-		for (let fmt of fmts)
-		{
-			this.SFmt2DataType[fmt[0]] = fmt[2];
-			this.SFmt2Fmt[fmt[0]]      = fmt[1];
-			this.Str2SFmt[fmt[3]]      = fmt[0];
-		}
-	};
-	__sfmt2datatype(fmt)
-	{
-		return this.SFmt2DataType[fmt] || 'f32';
-	};
-	__sfmt2fmt(fmt)
-	{
-		return this.SFmt2Fmt[fmt] || 'rgba8unorm';
-	};
-	__str2sfmt(str)
-	{
-		return this.Str2SFmt[str] || 'rgba8unorm';
-	};
 	createShaderFromString(source, settings = {})
 	{
 		//console.log(source)
 
 		const shaderModule      = this.gpuDevice.createShaderModule({ code: source });
-		settings.webCS          = this;
 		settings.commandEncoder = this.gpuDevice.createCommandEncoder();
 		this.commandEncoder     = settings.commandEncoder;
-		return new CSKernel(shaderModule, settings);
+		let webCS               = this;
+		return new CSKernel(webCS, shaderModule, settings);
 	};
 	createShaderFromFunction(func, settings = {})
 	{
@@ -615,6 +605,56 @@ class WebCS
 					{
 						func_si = csmain_nocomments.indexOf('function', func_si + 8);
 					}
+				}
+			}
+		}
+
+		// process the module-scope const
+		if (true)
+		{
+			let func_si = csmain_nocomments.indexOf('const');
+			if (func_si > 0)
+			{
+				while (func_si > 0)
+				{
+					if (isWhite(csmain_nocomments[func_si + 5]))
+					{
+						let funcEndI = csmain_nocomments.indexOf(';', func_si + 5) + 1;
+						if (funcEndI == null)
+						{
+							// Error
+						}
+						let myvar       = 'let ' + csmain_nocomments.substring(func_si + 5, funcEndI);
+						global_func_str = global_func_str + '\n' + myvar;
+						csmain_nocomments =
+						    csmain_nocomments.substring(0, func_si) + csmain_nocomments.substring(funcEndI);
+						func_si = csmain_nocomments.indexOf('const');
+					}
+					else
+					{
+						func_si = csmain_nocomments.indexOf('const', func_si + 5);
+					}
+				}
+			}
+		}
+
+		// process the var<workgroup>
+		if (true)
+		{
+			let func_si = csmain_nocomments.indexOf('var<workgroup>');
+			if (func_si > 0)
+			{
+				while (func_si > 0)
+				{
+					let funcEndI = csmain_nocomments.indexOf(';', func_si + 14) + 1;
+					if (funcEndI == null)
+					{
+						// Error
+					}
+					let myvar         = csmain_nocomments.substring(func_si, funcEndI);
+					global_func_str   = global_func_str + '\n' + myvar;
+					csmain_nocomments = csmain_nocomments.substring(0, func_si) + csmain_nocomments.substring(funcEndI);
+					func_si           = csmain_nocomments.indexOf('var<workgroup>');
 				}
 			}
 		}
@@ -708,8 +748,8 @@ class WebCS
 				}
 				for (let paramname of settings.params.all)
 				{
-					let memaccessor   = new RegExp(['(', paramname, ')', '\\s*\\['].join(''), 'g');
-					csmain_nocomments = csmain_nocomments.replace(memaccessor, '$1.data[');
+					let memaccessor   = new RegExp(['[\\W](', paramname, ')', '\\s*\\['].join(''), 'g');
+					csmain_nocomments = csmain_nocomments.replace(memaccessor, ' $1.data[');
 				}
 			}
 
@@ -846,18 +886,21 @@ class WebCS
         ${layout_str} 
         ${unform_str}
         ${global_str}
-        var<private> workgroup_id:vec3<u32>;
+        let LOCAL_SIZE_X:u32 = ${local_size[0]}u;
+        let LOCAL_SIZE_Y:u32 = ${local_size[1]}u;
+        let LOCAL_SIZE_Z:u32 = ${local_size[2]}u;
         var<private> num_workgroups:vec3<u32>;
+        var<private> workgroup_id:vec3<u32>;
         ${global_func_str}
-        fn csmain(thread: vec3<u32>, block:vec3<u32>){
+        fn csmain(thread: vec3<u32>, localthread:vec3<u32>, workgroup_id:vec3<u32>){
             ${csmain_nocomments}
         }
         @stage(compute) @workgroup_size(${local_size[0]}, ${local_size[1]}, ${local_size[2]})
 
-        fn main(@builtin(global_invocation_id) thread: vec3<u32>, @builtin(workgroup_id) block: vec3<u32>, @builtin(num_workgroups) wgs:vec3<u32>) {
-            workgroup_id = block;
+        fn main(@builtin(global_invocation_id) thread: vec3<u32>, @builtin(local_invocation_id) localthread: vec3<u32>, @builtin(workgroup_id) block: vec3<u32>, @builtin(num_workgroups) wgs:vec3<u32>) {
             num_workgroups = wgs;
-            csmain(thread, block);
+            workgroup_id = block;
+            csmain(thread, localthread, block);
         }
         `
 		// clang-format on
@@ -907,6 +950,14 @@ class WebCS
 		}
 		return { 'type': t, 'dim': dim };
 	};
+
+	/**
+     *Create CSKernel from 'source code' or function 
+     *@param {source_or_function} source - 'source code' or function
+     *@param {{}} settings - input settings
+     *@example
+     *   let cs_smm = webCS.createShader(gpu_smm_naive, {local_size:[8, 8, 1], groups:[M/8, N/8, 1]});
+     */
 	createShader(source, settings = {})
 	{
 		if (true)
@@ -940,6 +991,10 @@ class WebCS
 		this.glsl_functions += func;
 	};
 
+	/**
+     * Present the tex to this.canvas 
+     * @param {GPUTexture} tex - texture to be presented
+     */
 	async present(tex)
 	{
 		console.log('present');
@@ -953,17 +1008,17 @@ class WebCS
 		];
 
 		/*
-		if (tex == undefined)
-		{
-			tex       = this.createTexture('rgba8unorm', canvas.width, canvas.height);
-			let image = document.getElementById('image000');
-			await image.decode();
-			let w           = canvas.width;
-			let h           = canvas.height;
-			let imageBitmap = await createImageBitmap(image);
-			device.queue.copyExternalImageToTexture(
-			    { source: imageBitmap }, { texture: tex }, [imageBitmap.width, imageBitmap.height]);
-		}
+        if (tex == undefined)
+        {
+            tex       = this.createTexture('rgba8unorm', canvas.width, canvas.height);
+            let image = document.getElementById('image000');
+            await image.decode();
+            let w           = canvas.width;
+            let h           = canvas.height;
+            let imageBitmap = await createImageBitmap(image);
+            device.queue.copyExternalImageToTexture(
+                { source: imageBitmap }, { texture: tex }, [imageBitmap.width, imageBitmap.height]);
+        }
         */
 		context.configure({
 			device,
@@ -971,39 +1026,39 @@ class WebCS
 			size: presentationSize,
 		});
 		const fullscreenTexturedQuadWGSL = `
-		@group(0) @binding(0) var mSampler : sampler;
-		@group(0) @binding(1) var mTexture : texture_2d<f32>;
+        @group(0) @binding(0) var mSampler : sampler;
+        @group(0) @binding(1) var mTexture : texture_2d<f32>;
 
-		struct VertexOutput {
-			@builtin(position) Position : vec4<f32>;
-			@location(0) fragUV : vec2<f32>;
-		};
+        struct VertexOutput {
+            @builtin(position) Position : vec4<f32>;
+            @location(0) fragUV : vec2<f32>;
+        };
 
-		@stage(vertex)
-		fn vert_main(@builtin(vertex_index) VertexIndex : u32) -> VertexOutput {
-			var pos = array<vec2<f32>, 4>(
-				vec2<f32>( 1.0,  1.0),
-				vec2<f32>( 1.0, -1.0),
-				vec2<f32>(-1.0,  1.0),
-				vec2<f32>(-1.0,  -1.0));
+        @stage(vertex)
+        fn vert_main(@builtin(vertex_index) VertexIndex : u32) -> VertexOutput {
+            var pos = array<vec2<f32>, 4>(
+                vec2<f32>( 1.0,  1.0),
+                vec2<f32>( 1.0, -1.0),
+                vec2<f32>(-1.0,  1.0),
+                vec2<f32>(-1.0,  -1.0));
 
-			var uv = array<vec2<f32>, 4>(
-				vec2<f32>(1.0, 0.0),
-				vec2<f32>(1.0, 1.0),
-				vec2<f32>(0.0, 0.0),
-				vec2<f32>(0.0, 1.0));
+            var uv = array<vec2<f32>, 4>(
+                vec2<f32>(1.0, 0.0),
+                vec2<f32>(1.0, 1.0),
+                vec2<f32>(0.0, 0.0),
+                vec2<f32>(0.0, 1.0));
 
-			var output : VertexOutput;
-			output.Position = vec4<f32>(pos[VertexIndex], 0.0, 1.0);
-			output.fragUV = uv[VertexIndex];
-			return output;
-		}
+            var output : VertexOutput;
+            output.Position = vec4<f32>(pos[VertexIndex], 0.0, 1.0);
+            output.fragUV = uv[VertexIndex];
+            return output;
+        }
 
-		@stage(fragment)
-		fn frag_main(@location(0) fragUV : vec2<f32>) -> @location(0) vec4<f32> {
+        @stage(fragment)
+        fn frag_main(@location(0) fragUV : vec2<f32>) -> @location(0) vec4<f32> {
             var color:vec4<f32> = textureSample(mTexture, mSampler, fragUV);
             return color;
-		}
+        }
         `;
 		const fullscreenQuadPipeline     = device.createRenderPipeline({
             vertex: {
@@ -1093,6 +1148,9 @@ class WebCS
 		tex.size   = [w, h, 4];
 		return tex;
 	};
+	/**
+     *Copy for gpu vid to host arrary
+     */
 	async getData(vid, dstarray)
 	{
 		function isTypedArray(arr)
@@ -1172,6 +1230,51 @@ class WebCS
 		gpuReadBuffer.unmap();
 		return dstarray;
 	}
+
+	__setFmt()
+	{
+		// clang-format off
+        let fmts = [
+            // SFmt,       Fmt  ,        DataType, str
+            ['rgba8unorm' , 'rgba8unorm' , 'f32', 'rgba8'],
+            ['rgba8unorm' , 'rgba8unorm' , 'f32', 'rgba'],
+            ['rgba8unorm' , 'rgba8unorm' , 'f32', 'rgba8unorm'],
+            ['rgba8snorm' , 'rgba8snorm' , 'f32', 'rgba8snorm'],
+            ['rgba8uint'  , 'rgba8uint'  , 'u32', 'rgba8uint'],
+            ['rgba8sint'  , 'rgba8sint'  , 'i32', 'rgba8sint'],
+            ['rgba16uint' , 'rgba16uint' , 'u32', 'rgba16uint'],
+            ['rgba16sint' , 'rgba16sint' , 'i32', 'rgba16sint'],
+            ['rgba16float', 'rgba16float', 'f32', 'rgba16float'],
+            ['r32uint'    , 'r32uint'    , 'u32', 'r32uint'],
+            ['r32sint'    , 'r32sint'    , 'i32', 'r32sint'],
+            ['r32float'   , 'r32float'   , 'f32', 'r32float'],
+            ['rg32uint'   , 'rg32uint'   , 'u32', 'rg32uint'],
+            ['rg32sint'   , 'rg32sint'   , 'i32', 'rg32sint'],
+            ['rg32float'  , 'rg32float'  , 'f32', 'rg32float'],
+            ['rgba32uint' , 'rgba32uint' , 'u32', 'rgba32uint'],
+            ['rgba32sint' , 'rgba32sint' , 'i32', 'rgba32sint'],
+            ['rgba32float', 'rgba32float', 'f32', 'rgba32float'],
+        ];
+		// clang-format on
+		for (let fmt of fmts)
+		{
+			this.SFmt2DataType[fmt[0]] = fmt[2];
+			this.SFmt2Fmt[fmt[0]]      = fmt[1];
+			this.Str2SFmt[fmt[3]]      = fmt[0];
+		}
+	};
+	__sfmt2datatype(fmt)
+	{
+		return this.SFmt2DataType[fmt] || 'f32';
+	};
+	__sfmt2fmt(fmt)
+	{
+		return this.SFmt2Fmt[fmt] || 'rgba8unorm';
+	};
+	__str2sfmt(str)
+	{
+		return this.Str2SFmt[str] || 'rgba8unorm';
+	};
 };
 win.WebCS = WebCS;
 })(window);

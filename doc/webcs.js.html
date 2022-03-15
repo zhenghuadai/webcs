@@ -1,10 +1,38 @@
-function _isString(arg)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: webcs.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: webcs.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>function _isString(arg)
 {
 	return typeof arg === 'string';
 }
 function _isArray(arg)
 {
-	return Array.isArray(arg) || (ArrayBuffer.isView(arg) && !(arg instanceof DataView));
+	return Array.isArray(arg) || (ArrayBuffer.isView(arg) &amp;&amp; !(arg instanceof DataView));
 }
 /** class for ComputeShader Kernel*/
 class CSKernel
@@ -23,7 +51,7 @@ class CSKernel
      *       "A":{"index":0,"type":{"type":"f32","dim":1}},
      *       "B":{"index":1,"type":{"type":"f32","dim":1}},
      *       "C":{"index":2,"type":{"type":"f32","dim":1}}},
-     *   "uniform":{"MNK":{"type":"vec4<u32>","fields":{},"x":1,"y":1,"z":1,"index":0}}
+     *   "uniform":{"MNK":{"type":"vec4&lt;u32>","fields":{},"x":1,"y":1,"z":1,"index":0}}
      * };
      * let kernel = new CSKernel(webCS, prog, settings);
      */
@@ -83,7 +111,7 @@ class CSKernel
 	{
 		let device = this.webCS.gpuDevice;
 		let values = rest; // [v0, 0, 0, 0];
-		//for (let i = 0; i < rest.length; i++)
+		//for (let i = 0; i &lt; rest.length; i++)
 		//{
 		//    values[i + 1] = rest[i];
 		//}
@@ -91,15 +119,15 @@ class CSKernel
 		const slot = this.settings.uniform[name].index;
 
 		let uniformValue = null;
-		if (mytype == 'vec4<u32>')
+		if (mytype == 'vec4&lt;u32>')
 		{
 			uniformValue = new Uint32Array(values);
 		}
-		else if (mytype == 'vec4<i32>')
+		else if (mytype == 'vec4&lt;i32>')
 		{
 			uniformValue = new int32Array(values);
 		}
-		else if (mytype == 'vec4<f32>')
+		else if (mytype == 'vec4&lt;f32>')
 		{
 			uniformValue = new Float32Array(values);
 		}
@@ -192,7 +220,7 @@ class CSKernel
 	{
 		let device  = this.webCS.gpuDevice;
 		let entries = [];
-		for (var i = 0; i < this.settings.params.all.length; i++)
+		for (var i = 0; i &lt; this.settings.params.all.length; i++)
 		{
 			let argName  = this.settings.params.all[i];
 			let param    = this.settings.params[argName];
@@ -298,7 +326,7 @@ class CSKernel
 				if (this.vids[i] != null)
 				{
 					let vid_size = this.vids[i].size;
-					if (vid_size < arg.byteLength)
+					if (vid_size &lt; arg.byteLength)
 					{
 						// gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, null);
 						this.vids[i]           = createBuffer(arg.byteLength);
@@ -360,8 +388,8 @@ class CSKernel
 				{
 					this.vids[i] = createTexture.apply(this);
 				}
-				if (this.vids[i].width != null && this.vids[i].height != null &&
-				    (this.vids[i].width < arg.width || this.vids[i].height < arg.height))
+				if (this.vids[i].width != null &amp;&amp; this.vids[i].height != null &amp;&amp;
+				    (this.vids[i].width &lt; arg.width || this.vids[i].height &lt; arg.height))
 				{
 					this.vids[i] = createTexture.apply(this, [arg.width, arg.height, sfmt]);
 				}
@@ -400,12 +428,12 @@ class CSKernel
 	{
 		let nargs = this.settings.params.all.length;
 		this.vids = this.vids || Array.from({ length: nargs }, (v, i) => null);
-		if ((args.lenght != nargs) && (args.length != nargs + 1) && (args.length != nargs + 3) &&
+		if ((args.lenght != nargs) &amp;&amp; (args.length != nargs + 1) &amp;&amp; (args.length != nargs + 3) &amp;&amp;
 		    (args.length != nargs + 4))
 		{
 			// error
 		}
-		for (var i = 0; i < this.vids.length; i++)
+		for (var i = 0; i &lt; this.vids.length; i++)
 		{
 			await this.__updateArg(i, args[i]);
 		}
@@ -438,7 +466,7 @@ class CSKernel
 		let device          = this.webCS.gpuDevice;
 		let bindGroupLayout = this.bindGroupLayout;
 		let entries         = [];
-		for (var i = 0; i < this.settings.params.all.length; i++)
+		for (var i = 0; i &lt; this.settings.params.all.length; i++)
 		{
 			let buffer = this.vids[i];
 			if (buffer instanceof GPUTexture)
@@ -463,7 +491,7 @@ class CSKernel
 		let bindGroupLayout = this.uniformBindGroupLayout;
 		let entries         = [];
 		let nUniform        = Object.keys(this.settings.uniform).length;
-		for (var i = 0; i < nUniform; i++)
+		for (var i = 0; i &lt; nUniform; i++)
 		{
 			let buffer = this.uniformVids[i];
 			entries.push({ binding: i, resource: { buffer: buffer } });
@@ -476,7 +504,7 @@ class CSKernel
 	};
 };
 var csmain = `
-fn main(@builtin(global_invocation_id) thread: vec3<u32>) {
+fn main(@builtin(global_invocation_id) thread: vec3&lt;u32>) {
     csmain();
 }
 `;
@@ -570,7 +598,7 @@ class WebCS
 				{
 					let l      = str.length;
 					let ending = 0;
-					for (let iii = si; iii < l; iii++)
+					for (let iii = si; iii &lt; l; iii++)
 					{
 						if (str[iii] == '{')
 							ending = ending + 1;
@@ -604,56 +632,6 @@ class WebCS
 					{
 						func_si = csmain_nocomments.indexOf('function', func_si + 8);
 					}
-				}
-			}
-		}
-
-		// process the module-scope const
-		if (true)
-		{
-			let func_si = csmain_nocomments.indexOf('const');
-			if (func_si > 0)
-			{
-				while (func_si > 0)
-				{
-					if (isWhite(csmain_nocomments[func_si + 5]))
-					{
-						let funcEndI = csmain_nocomments.indexOf(';', func_si + 5) + 1;
-						if (funcEndI == null)
-						{
-							// Error
-						}
-						let myvar       = 'let ' + csmain_nocomments.substring(func_si + 5, funcEndI);
-						global_func_str = global_func_str + '\n' + myvar;
-						csmain_nocomments =
-						    csmain_nocomments.substring(0, func_si) + csmain_nocomments.substring(funcEndI);
-						func_si = csmain_nocomments.indexOf('const');
-					}
-					else
-					{
-						func_si = csmain_nocomments.indexOf('const', func_si + 5);
-					}
-				}
-			}
-		}
-
-		// process the var<workgroup>
-		if (true)
-		{
-			let func_si = csmain_nocomments.indexOf('var<workgroup>');
-			if (func_si > 0)
-			{
-				while (func_si > 0)
-				{
-					let funcEndI = csmain_nocomments.indexOf(';', func_si + 14) + 1;
-					if (funcEndI == null)
-					{
-						// Error
-					}
-					let myvar         = csmain_nocomments.substring(func_si, funcEndI);
-					global_func_str   = global_func_str + '\n' + myvar;
-					csmain_nocomments = csmain_nocomments.substring(0, func_si) + csmain_nocomments.substring(funcEndI);
-					func_si           = csmain_nocomments.indexOf('var<workgroup>');
 				}
 			}
 		}
@@ -694,7 +672,7 @@ class WebCS
 			{
 				let params_tex =
 				    Object.keys(settings.params)
-				        .filter(key => settings.params[key].type != null && settings.params[key].type.dim === 2);
+				        .filter(key => settings.params[key].type != null &amp;&amp; settings.params[key].type.dim === 2);
 				if (0 == params_tex.length)
 				{
 				}
@@ -717,13 +695,13 @@ class WebCS
 							//let texreaders = [...csmain_nocomments.matchAll(texreader)];
 							//let texwriters = [...csmain_nocomments.matchAll(texwriter)];
 							csmain_nocomments = csmain_nocomments.replace(
-							    texwriter2, 'textureStore($1,vec2<i32>(i32($3),i32($2)), $4);');
+							    texwriter2, 'textureStore($1,vec2&lt;i32>(i32($3),i32($2)), $4);');
 							csmain_nocomments =
-							    csmain_nocomments.replace(texwriter, 'textureStore($1,vec2<i32>($2), $3);');
+							    csmain_nocomments.replace(texwriter, 'textureStore($1,vec2&lt;i32>($2), $3);');
 							csmain_nocomments =
-							    csmain_nocomments.replace(texreader2, 'textureLoad($1,vec2<i32>(i32($3),i32($2)), 0);');
+							    csmain_nocomments.replace(texreader2, 'textureLoad($1,vec2&lt;i32>(i32($3),i32($2)), 0);');
 							csmain_nocomments =
-							    csmain_nocomments.replace(texreader, 'textureLoad($1,vec2<i32>($2), 0);');
+							    csmain_nocomments.replace(texreader, 'textureLoad($1,vec2&lt;i32>($2), 0);');
 						}
 					}
 					// let's find out the imageStore
@@ -747,13 +725,13 @@ class WebCS
 				}
 				for (let paramname of settings.params.all)
 				{
-					let memaccessor   = new RegExp(['[\\W](', paramname, ')', '\\s*\\['].join(''), 'g');
-					csmain_nocomments = csmain_nocomments.replace(memaccessor, ' $1.data[');
+					let memaccessor   = new RegExp(['(', paramname, ')', '\\s*\\['].join(''), 'g');
+					csmain_nocomments = csmain_nocomments.replace(memaccessor, '$1.data[');
 				}
 			}
 
 			// Declare the params in GLSL
-			for (var pi = 0; pi < params.length; pi++)
+			for (var pi = 0; pi &lt; params.length; pi++)
 			{
 				let param_name = params[pi];
 				let param_type = settings.params[param_name].type;
@@ -762,8 +740,8 @@ class WebCS
 					let num_type = param_type.type;
 					// clang-format off
                      layout_str = layout_str +
-                        ` struct struct_${param_name}{ data: array<${num_type}>;} ;\n@group(0) @binding(${pi}) var<storage, read_write> ${param_name} : struct_${param_name};\n`;
-                    //            [[group(0), binding(2)]] var<storage, write> resultMatrix : array<f32>;
+                        ` struct struct_${param_name}{ data: array&lt;${num_type}>;} ;\n@group(0) @binding(${pi}) var&lt;storage, read_write> ${param_name} : struct_${param_name};\n`;
+                    //            [[group(0), binding(2)]] var&lt;storage, write> resultMatrix : array&lt;f32>;
                     //layout (std430, binding = 0) buffer ssbA {  float A[]; };
                     //`layout (std430, binding = ${pi}) buffer ssb${param_name} {  ${num_type} ${param_name}[]; };`;
 					// clang-format on
@@ -776,15 +754,15 @@ class WebCS
 
                     let rwmode = settings.params[param_name].rwmode == 'w' ?  'writeonly' : 'readonly';
                     let attr = settings.params[param_name].attr || "";
-                    if((attr.indexOf('readonly') == -1 ) && (attr.indexOf('writeonly') == -1)){
+                    if((attr.indexOf('readonly') == -1 ) &amp;&amp; (attr.indexOf('writeonly') == -1)){
                         attr = attr + " " + rwmode; 
                     }
                     if(attr.indexOf('readonly') > 0 ){
                         layout_str = layout_str +
-                            `@group(0) @binding(${pi}) var ${param_name} : texture_2d<${value_type}>;\n`;
+                            `@group(0) @binding(${pi}) var ${param_name} : texture_2d&lt;${value_type}>;\n`;
                     }else{
                         layout_str = layout_str +
-                            `@group(0) @binding(${pi}) var ${param_name} : texture_storage_2d<${pix_type}, write>;\n`;
+                            `@group(0) @binding(${pi}) var ${param_name} : texture_storage_2d&lt;${pix_type}, write>;\n`;
                     }
 					// clang-format on
 				}
@@ -817,14 +795,14 @@ class WebCS
 				return si;
 			};
 			var types = {
-				'u32': 'vec4<u32>',
-				'f32': 'vec4<f32>',
-				'i32': 'vec4<i32>',
-				'f64': 'vec4<f64>',
-				'vec4<i32>': 'vec4<i32>',
-				'vec4<u32>': 'vec4<u32>',
-				'vec4<f32>': 'vec4<f32>',
-				'vec4<f64>': 'vec4<f64>'
+				'u32': 'vec4&lt;u32>',
+				'f32': 'vec4&lt;f32>',
+				'i32': 'vec4&lt;i32>',
+				'f64': 'vec4&lt;f64>',
+				'vec4&lt;i32>': 'vec4&lt;i32>',
+				'vec4&lt;u32>': 'vec4&lt;u32>',
+				'vec4&lt;f32>': 'vec4&lt;f32>',
+				'vec4&lt;f64>': 'vec4&lt;f64>'
 			};
 			for (let match of matches)
 			{
@@ -844,7 +822,7 @@ class WebCS
 					let type_si    = indexOfNonSpace(csmain_nocomments, lineStartI);
 					let type_ei    = indexOfSpace(csmain_nocomments, type_si);
 					let type_str   = csmain_nocomments.substring(type_si, type_ei);
-					let mytype     = types[type_str] || 'vec4<u32>';
+					let mytype     = types[type_str] || 'vec4&lt;u32>';
 					settings.uniform[vname]['type'] = mytype;
 				}
 			}
@@ -861,10 +839,10 @@ class WebCS
 			{
 				let mytype                      = settings.uniform[uniform].type;
 				settings.uniform[uniform].index = pi;
-				// [[binding(0), group(0)]] var<uniform> params : SimParams;
+				// [[binding(0), group(0)]] var&lt;uniform> params : SimParams;
 				let my_uniform_str = `
                 struct struct_${uniform} {data:${mytype};};
-                @group(1) @binding(${pi}) var<uniform> ${uniform} : struct_${uniform};`;
+                @group(1) @binding(${pi}) var&lt;uniform> ${uniform} : struct_${uniform};`;
 				unform_str = unform_str + my_uniform_str;
 			}
 			if (true)
@@ -885,21 +863,18 @@ class WebCS
         ${layout_str} 
         ${unform_str}
         ${global_str}
-        let LOCAL_SIZE_X:u32 = ${local_size[0]}u;
-        let LOCAL_SIZE_Y:u32 = ${local_size[1]}u;
-        let LOCAL_SIZE_Z:u32 = ${local_size[2]}u;
-        var<private> num_workgroups:vec3<u32>;
-        var<private> workgroup_id:vec3<u32>;
+        var&lt;private> workgroup_id:vec3&lt;u32>;
+        var&lt;private> num_workgroups:vec3&lt;u32>;
         ${global_func_str}
-        fn csmain(thread: vec3<u32>, localthread:vec3<u32>, workgroup_id:vec3<u32>){
+        fn csmain(thread: vec3&lt;u32>, block:vec3&lt;u32>){
             ${csmain_nocomments}
         }
         @stage(compute) @workgroup_size(${local_size[0]}, ${local_size[1]}, ${local_size[2]})
 
-        fn main(@builtin(global_invocation_id) thread: vec3<u32>, @builtin(local_invocation_id) localthread: vec3<u32>, @builtin(workgroup_id) block: vec3<u32>, @builtin(num_workgroups) wgs:vec3<u32>) {
-            num_workgroups = wgs;
+        fn main(@builtin(global_invocation_id) thread: vec3&lt;u32>, @builtin(workgroup_id) block: vec3&lt;u32>, @builtin(num_workgroups) wgs:vec3&lt;u32>) {
             workgroup_id = block;
-            csmain(thread, localthread, block);
+            num_workgroups = wgs;
+            csmain(thread, block);
         }
         `
 		// clang-format on
@@ -950,7 +925,7 @@ class WebCS
 		return { 'type': t, 'dim': dim };
 	};
 
-	/**
+    /**
      *Create CSKernel from 'source code' or function 
      *@param {source_or_function} source - 'source code' or function
      *@param {{}} settings - input settings
@@ -990,7 +965,7 @@ class WebCS
 		this.glsl_functions += func;
 	};
 
-	/**
+    /**
      * Present the tex to this.canvas 
      * @param {GPUTexture} tex - texture to be presented
      */
@@ -1026,36 +1001,36 @@ class WebCS
 		});
 		const fullscreenTexturedQuadWGSL = `
         @group(0) @binding(0) var mSampler : sampler;
-        @group(0) @binding(1) var mTexture : texture_2d<f32>;
+        @group(0) @binding(1) var mTexture : texture_2d&lt;f32>;
 
         struct VertexOutput {
-            @builtin(position) Position : vec4<f32>;
-            @location(0) fragUV : vec2<f32>;
+            @builtin(position) Position : vec4&lt;f32>;
+            @location(0) fragUV : vec2&lt;f32>;
         };
 
         @stage(vertex)
         fn vert_main(@builtin(vertex_index) VertexIndex : u32) -> VertexOutput {
-            var pos = array<vec2<f32>, 4>(
-                vec2<f32>( 1.0,  1.0),
-                vec2<f32>( 1.0, -1.0),
-                vec2<f32>(-1.0,  1.0),
-                vec2<f32>(-1.0,  -1.0));
+            var pos = array&lt;vec2&lt;f32>, 4>(
+                vec2&lt;f32>( 1.0,  1.0),
+                vec2&lt;f32>( 1.0, -1.0),
+                vec2&lt;f32>(-1.0,  1.0),
+                vec2&lt;f32>(-1.0,  -1.0));
 
-            var uv = array<vec2<f32>, 4>(
-                vec2<f32>(1.0, 0.0),
-                vec2<f32>(1.0, 1.0),
-                vec2<f32>(0.0, 0.0),
-                vec2<f32>(0.0, 1.0));
+            var uv = array&lt;vec2&lt;f32>, 4>(
+                vec2&lt;f32>(1.0, 0.0),
+                vec2&lt;f32>(1.0, 1.0),
+                vec2&lt;f32>(0.0, 0.0),
+                vec2&lt;f32>(0.0, 1.0));
 
             var output : VertexOutput;
-            output.Position = vec4<f32>(pos[VertexIndex], 0.0, 1.0);
+            output.Position = vec4&lt;f32>(pos[VertexIndex], 0.0, 1.0);
             output.fragUV = uv[VertexIndex];
             return output;
         }
 
         @stage(fragment)
-        fn frag_main(@location(0) fragUV : vec2<f32>) -> @location(0) vec4<f32> {
-            var color:vec4<f32> = textureSample(mTexture, mSampler, fragUV);
+        fn frag_main(@location(0) fragUV : vec2&lt;f32>) -> @location(0) vec4&lt;f32> {
+            var color:vec4&lt;f32> = textureSample(mTexture, mSampler, fragUV);
             return color;
         }
         `;
@@ -1147,18 +1122,18 @@ class WebCS
 		tex.size   = [w, h, 4];
 		return tex;
 	};
-	/**
+    /**
      *Copy for gpu vid to host arrary
      */
 	async getData(vid, dstarray)
 	{
 		function isTypedArray(arr)
 		{
-			return ArrayBuffer.isView(arr) && !(arr instanceof DataView);
+			return ArrayBuffer.isView(arr) &amp;&amp; !(arr instanceof DataView);
 		}
 		function getType(arr)
 		{
-			return isTypedArray(arr) && arr.constructor.name;
+			return isTypedArray(arr) &amp;&amp; arr.constructor.name;
 		}
 		function getHostAccessArrary(dstarray, arrayBuffer)
 		{
@@ -1218,7 +1193,7 @@ class WebCS
 		const arrayBuffer    = gpuReadBuffer.getMappedRange();
 		let hostAccessArrary = getHostAccessArrary(dstarray, arrayBuffer);
 
-		if (isTypedArray(dstarray) && (dstarray.length == hostAccessArrary.length))
+		if (isTypedArray(dstarray) &amp;&amp; (dstarray.length == hostAccessArrary.length))
 		{
 			dstarray.set(hostAccessArrary);
 		}
@@ -1276,3 +1251,26 @@ class WebCS
 	};
 };
 export {WebCS};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="CSKernel.html">CSKernel</a></li><li><a href="WebCS.html">WebCS</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.10</a> on Sun Feb 27 2022 00:22:01 GMT-0500 (Eastern Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

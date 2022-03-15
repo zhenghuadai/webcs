@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Class: CSKernel</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Class: CSKernel</h1>
+
+    
+
+
+
+
+<section>
+
+<header>
+    
+        <h2><span class="attribs"><span class="type-signature"></span></span>CSKernel<span class="signature">(webCS, prog, settings)</span><span class="type-signature"></span></h2>
+        
+            <div class="class-description">class for ComputeShader Kernel</div>
+        
+    
+</header>
+
+<article>
+    <div class="container-overview">
+    
+        
+
+    
+    <h2>Constructor</h2>
+    
+
+    
+    <h4 class="name" id="CSKernel"><span class="type-signature"></span>new CSKernel<span class="signature">(webCS, prog, settings)</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Create a CSKernel
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>webCS</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type"><a href="WebCS.html">WebCS</a></span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">instance of WebCS</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>prog</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">GPUShaderModule</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">instance of GPUShaderModule</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>settings</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">settings</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="webcs.js.html">webcs.js</a>, <a href="webcs.js.html#line10">line 10</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5>Example</h5>
+    
+    <pre class="prettyprint"><code>let settings = {
+  "local_size":[8,8,1],
+  "groups":[8,8,1],
+  "params":{
+      "all":["A","B","C"],
+      "A":{"index":0,"type":{"type":"f32","dim":1}},
+      "B":{"index":1,"type":{"type":"f32","dim":1}},
+      "C":{"index":2,"type":{"type":"f32","dim":1}}},
+  "uniform":{"MNK":{"type":"vec4&lt;u32>","fields":{},"x":1,"y":1,"z":1,"index":0}}
+};
+let kernel = new CSKernel(webCS, prog, settings);</code></pre>
+
+
+
+    
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+        <h3 class="subsection-title">Methods</h3>
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="run"><span class="type-signature">(async) </span>run<span class="signature">(arg, groups_xyz, uniform)</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Dispatch Compute Kernel
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>arg</code></td>
+            
+
+            <td class="type">
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">a list of shader arguments, such as run(arg0, arg1, ..., argn)</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>groups_xyz</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">unfold_of_vec3</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">optional, the size of work group, such as run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z)</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>uniform</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">optional, uniform , such as run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z, {uniform_name:uniform[0,1,2,3]})</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="webcs.js.html">webcs.js</a>, <a href="webcs.js.html#line53">line 53</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <h5>Example</h5>
+    
+    <pre class="prettyprint"><code>run(arg0, arg1, ..., argn)
+run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z)
+run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z, {uniform_name:uniform[0,1,2,3]})
+run(arg0, arg1, ..., argn, {uniform_name:uniform[0,1,2,3]})</code></pre>
+
+
+
+        
+    
+
+    
+
+    
+</article>
+
+</section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="CSKernel.html">CSKernel</a></li><li><a href="WebCS.html">WebCS</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.10</a> on Sun Feb 27 2022 00:22:01 GMT-0500 (Eastern Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
