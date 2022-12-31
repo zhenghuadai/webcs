@@ -1,19 +1,21 @@
-import {App} from '/js/webCS.html.js'
-import {WebCS} from '../src/webcs.js'
-import {displayMatrix} from './matrix.js'
 import './matrix.css'
 
+import {App} from '/js/webCS.html.js'
+
+import {WebCS} from '../src/webcs.js'
+
+import {displayMatrix} from './matrix.js'
 
 let webCS        = null;
 let cs_smm_naive = null;
 let cs_texture   = null;
 let cs_img_dwt   = null;
 let cs_kernels   = {};
-let gpu_kernels = {};
+let gpu_kernels  = {};
 let do_cs        = {};
 var X = 512, Y = 512, Z = 1;
 (function() {
-let testcases = ['smm_naive', 'texture', 'texture2', 'img_texture', 'img_dwt', 'histogram'];
+let testcases = ['smm_naive', 'texture', 'texture2', 'img_texture', 'img_dwt', 'histogram', 'filter'];
 // clang-format off
 function gpu_smm_naive(A,B,C){
            return `
@@ -100,6 +102,24 @@ function gpu_replace(src, dst, histo){
         dst[thread.xy] = new_pixel;
         `;
 }
+
+function gpu_filter(src, dst){
+	return `
+    const kernel = mat3x3f(
+        1.0,1.0,1.0,
+        0.0,0.0,0.0,
+        -1.0,-1.0,-1.0);
+    var pos:vec2<u32> = vec2<u32>(thread.xy);
+    var sum:vec4<f32> = vec4<f32>(0.0,0.0,0.0,1.0);
+    for(var j:u32=0; j<3; j++){
+        for(var i:u32=0; i<3; i++){
+            let pixel = src[pos.y + j -1][pos.x + i -1];
+            sum = sum + pixel * kernel[j][i];
+        }
+    }
+    dst[pos.y][pos.x] = sum;     
+    `;
+}
 // clang-format on
 gpu_kernels.smm_naive   = gpu_smm_naive;
 gpu_kernels.texture     = gpu_texture;
@@ -107,22 +127,10 @@ gpu_kernels.texture2    = gpu_texture2;
 gpu_kernels.img_texture = gpu_texture2;
 gpu_kernels.img_dwt     = gpu_img_dwt;
 gpu_kernels.histogram   = gpu_histogram;
+gpu_kernels.filter      = gpu_filter;
 
 // menus for example
 (function() {
-
-// append menus
-(function appendmenu() {
-	function doone(thefilters, themenu)
-	{
-		let ula = $('<ul/>');
-		thefilters.forEach(function(ele) {
-			ula.append('<li data-filter=\'' + ele + '\'><div>' + ele + '</div></li>');
-		});
-		$(themenu).append(ula.children().detach());
-	}
-	doone(testcases, '#example_menus');
-})();
 do_cs.do_smm_naive = async function(kernel_name) {
     // cpuC = cpuA * cpuB
     var M = 64, N = 64, K = 64;
@@ -245,6 +253,41 @@ do_cs.do_img_texture = async function(kernel_name) {
     $('#canvas2GPU').show();
 };
 
+do_cs.do_filter = async function(kernel_name) {
+    //if (cs_kernels['filter'] == null)
+    {
+        cs_kernels['filter'] = webCS.createShader(
+            gpu_filter,
+            { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: 'texture', 'dst': 'texture' } });
+    }
+
+    let texSrc = $('#image000')[0];
+    await cs_kernels['filter'].run(texSrc, null);
+
+    let tex = cs_kernels['filter'].getTexture('dst');
+    webCS.present(tex);
+    $('#display1')[0].appendChild(webCS.canvas);
+    $('#canvas2GPU').show();
+};
+
+do_cs.do_general = async function(kernel_name) {
+    if (cs_kernels['texture2'] == null)
+    {
+        cs_kernels['texture2'] = webCS.createShader(
+            gpu_kernels[kernel_name],
+            { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: 'texture', 'dst': 'texture' } });
+    }
+
+    let texSrc = $('#image000')[0];
+    await cs_kernels['texture2'].run(texSrc, null);
+
+    let tex = cs_kernels['texture2'].getTexture('dst');
+    webCS.present(tex);
+    $('#display1')[0].appendChild(webCS.canvas);
+    $('#canvas2GPU').show();
+};
+
+
 do_cs.do_histogram = async function(kernel_name) {
     // 1. create histogram kernel
     if (cs_kernels['histogram '] == null)
@@ -299,40 +342,61 @@ do_cs.do_histogram = async function(kernel_name) {
 
 function doExampleGPU(e, ui)
 {
-	let myfilter = ui.item.attr('data-filter');
-	$('.code.example').hide();
-	$('#canvas2GPU').hide();
-	$('#data_div').hide();
-	$('#code_' + myfilter).show();
-	do_cs['do_' + myfilter](myfilter);
+    let myfilter = ui.item.attr('data-filter');
+    $('.code.example').hide();
+    $('#canvas2GPU').hide();
+    $('#data_div').hide();
+    $('#code_' + myfilter).show();
+    if( 'do_' + myfilter in do_cs){
+        do_cs['do_' + myfilter](myfilter);
+    } else{
+        do_cs['do_general'](myfilter);
+    }
 }
 async function doExample(e, ui)
 {
-	let myfilter = ui.item.attr('data-filter');
-	if (webCS == null)
-	{
-		webCS = await WebCS.create({ canvas: $('#canvas2GPU')[0] });
-		//webCS = new WebCS();
-	}
-	if (myfilter == null)
-	{
-		return;
-	}
-	disablePractice();
-	doExampleGPU(e, ui);
+    let myfilter = ui.item.attr('data-filter');
+    if (webCS == null)
+    {
+        webCS = await WebCS.create({ canvas: $('#canvas2GPU')[0] });
+        //webCS = new WebCS();
+    }
+    if (myfilter == null)
+    {
+        return;
+    }
+    disablePractice();
+    doExampleGPU(e, ui);
 }
 
 function disablePractice()
 {
-	$('#GPUToggleButton').prop('checked', true);
-	$('#GPUToggleButton').click();
-	$('#practice_div').hide();
-	$('#code_div').show();
+    $('#GPUToggleButton').prop('checked', true);
+    $('#GPUToggleButton').click();
+    $('#practice_div').hide();
+    $('#code_div').show();
 }
+
+// append menus
+(function appendmenu() {
+    function doone(thefilters, themenu)
+    {
+        let ula = $('<ul/>');
+        thefilters.forEach(function(ele) {
+            ula.append('<li data-filter=\'' + ele + '\'><div>' + ele + '</div></li>');
+        });
+        $(themenu).append(ula.children().detach());
+    }
+    doone(testcases, '#example_menus');
+    doone(testcases, '#loadexample_menus');
+})();
+
+
 $('#examplemenu').menu({ select: doExample });
 })();
 
 (async function setupExample() {
+    /*
 	let example_js       = {};
 	example_js.smm_naive = `
         let M = 64, N = 64, K =64;
@@ -393,75 +457,104 @@ $('#examplemenu').menu({ select: doExample });
         webCS.present(tex);
         $("#display1")[0].appendChild(webCS.canvas);
         `;
-	//$("#code_smm_naive").hide();
-	let codes_block = $('#codes_block');
-	testcases.forEach(function(ele) {
-		let code_ele = $(`<code id='code_${ele}' class='code example language-javascript'></code>`)
-		var btf = hljs.highlight('c++', gpu_kernels[ele].toString());
+    */
+    //$("#code_smm_naive").hide();
+    let codes_block = $('#codes_block');
+    testcases.forEach(function(ele) {
+        let code_ele  = $(`<code id='code_${ele}' class='code example language-javascript'></code>`)
+        var btf = hljs.highlight('c++', gpu_kernels[ele].toString());
         let btf_value = btf.value;
-        if(ele == 'histogram'){
-            let r2 = hljs.highlight('c++', gpu_replace.toString()).value;
-            btf_value = btf_value +'\n' + r2;
+        if (ele == 'histogram')
+        {
+            let r2    = hljs.highlight('c++', gpu_replace.toString()).value;
+            btf_value = btf_value + '\n' + r2;
         }
         const use_example = false;
-		let btf2     = hljs.highlight('javascript', /*example_js[ele] ||*/ do_cs['do_' + ele].toString());
-        let btf2_value = btf2.value.replace('gpu_' + ele, '<span class="hljs-title">gpu_' + ele + '</span>');
+        let btf2          = hljs.highlight(
+            'javascript',
+            /*example_js[ele] ||*/ (('do_' + ele in do_cs) ? do_cs['do_' + ele] : do_cs['do_general']).toString());
+        let btf2_value    = btf2.value.replace('gpu_' + ele, '<span class="hljs-title">gpu_' + ele + '</span>');
         if (use_example)
         {
-            btf2_value = "await (async function(kernel_name) {" + btf2_value + "\n})();";
-        }else{
-            btf2_value = "await (" + btf2_value + ")();";
+            btf2_value = 'await (async function(kernel_name) {' + btf2_value + '\n})();';
         }
-		code_ele.html(
-		    '<div class="gpu_code example">' + btf_value + '<br/><br/>        ' +
-		    '</div>' +
-		    '<div class="js_code example">' +
-		    btf2_value + '</div>');
-		codes_block.append(code_ele);
-	});
-	$('.code.example').hide();
-	$('#code_smm_naive').show();
+        else
+        {
+            btf2_value = 'await (' + btf2_value + ')();';
+        }
+        code_ele.html(
+            '<div class="gpu_code example">' + btf_value + '<br/><br/>        ' +
+            '</div>' +
+            '<div class="js_code example">' + btf2_value + '</div>');
+        codes_block.append(code_ele);
+    });
+    $('.code.example').hide();
+    $('#code_smm_naive').show();
 })();
 })();
 
 $(function() {
-	var editorgpu = CodeMirror.fromTextArea(
-	    document.getElementById('practisegpu'), { lineNumbers: true, mode: 'text/x-c++src', matchBrackets: true });
-	var editorjs = CodeMirror.fromTextArea(
-	    document.getElementById('practisejs'), { lineNumbers: true, mode: 'javascript', matchBrackets: true });
-	$('#run_practise').button();
-	$('#run_practise').click(function() {
-		formatall(editorgpu);
-		formatall(editorjs);
-		let test_str =
-		    editorgpu.getValue() + '\n async function mypractice(){' + editorjs.getValue() + '}; mypractice();';
-		eval(test_str);
-	});
+    var editorgpu = CodeMirror.fromTextArea(
+        document.getElementById('practisegpu'), { lineNumbers: true, mode: 'text/x-c++src', matchBrackets: true });
+    var editorjs = CodeMirror.fromTextArea(
+        document.getElementById('practisejs'), { lineNumbers: true, mode: 'javascript', matchBrackets: true });
+    $('#run_practise').button();
+    $('#run_practise').click(function() {
+        formatall(editorgpu);
+        formatall(editorjs);
+        let test_str =
+            //editorgpu.getValue() + '\n async function mypractice(){' + editorjs.getValue() + '}; mypractice();';
+            editorgpu.getValue() + '\n (' + editorjs.getValue() + ')("test")'; 
+        eval(test_str);
+    });
 
-	function formatall(editor)
-	{
-		let oldSize    = editorgpu.getScrollInfo()
-		var totalLines = editor.lineCount();
-		editor.autoFormatRange({ line: 0, ch: 0 }, { line: totalLines });
-		editorgpu.setSize(oldSize.width, oldSize.height);
-	}
-	function setPractice()
-	{
-		if ($('#GPUToggleButton').is(':checked'))
-		{
-			$('#practice_div').show();
-			$('#code_div').hide();
-		}
-		else
-		{
-			$('#practice_div').hide();
-			$('#code_div').show();
-		}
-	}
-	if (document.location.hash === '#practise')
-	{
-		$('#GPUToggleButton').prop('checked', true);
-	}
-	setPractice();
-	$('#GPUToggleButton').click(setPractice);
+    function formatall(editor)
+    {
+        let oldSize    = editorgpu.getScrollInfo()
+        var totalLines = editor.lineCount();
+        editor.autoFormatRange({ line: 0, ch: 0 }, { line: totalLines });
+        editorgpu.setSize(oldSize.width, oldSize.height);
+    }
+    function setPractice()
+    {
+        if ($('#GPUToggleButton').is(':checked'))
+        {
+            $('#practice_div').show();
+            $('#code_div').hide();
+        }
+        else
+        {
+            $('#practice_div').hide();
+            $('#code_div').show();
+        }
+    }
+    if (document.location.hash === '#practise')
+    {
+        $('#GPUToggleButton').prop('checked', true);
+    }
+    setPractice();
+    $('#GPUToggleButton').click(setPractice);
+
+    // setup load
+    async function loadExample(e, ui)
+    {
+        let myfilter = ui.item.attr('data-filter');
+        if (myfilter == null)
+        {
+            return;
+        }
+        $('#GPUToggleButton').prop('checked', true);
+        setPractice();
+        if (webCS == null)
+        {
+            webCS = await WebCS.create({ canvas: $('#canvas2GPU')[0] });
+            //webCS = new WebCS();
+        }
+ 
+        let ele = myfilter;
+        editorgpu.setValue(gpu_kernels[ele].toString());
+        editorjs.setValue((('do_' + ele in do_cs) ? do_cs['do_' + ele] : do_cs['do_general']).toString());
+    }
+
+    $('#loadexamplemenu').menu({ select: loadExample });
 });

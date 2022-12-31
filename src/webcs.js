@@ -619,7 +619,7 @@ class WebCS
                         {
                             // Error
                         }
-                        let myvar       = 'let ' + csmain_nocomments.substring(func_si + 5, funcEndI);
+                        let myvar       = 'const ' + csmain_nocomments.substring(func_si + 5, funcEndI);
                         global_func_str = global_func_str + '\n' + myvar;
                         csmain_nocomments =
                             csmain_nocomments.substring(0, func_si) + csmain_nocomments.substring(funcEndI);

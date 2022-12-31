@@ -119,6 +119,17 @@ div.js_code.example{
                 </li>
             </ul>
         </div>
+        <div class='top-menu'>
+            <ul id='loadexamplemenu'>
+                <li> <div>load practice</div>
+                    <ul id='loadexample_menus'>
+                        <!-- 
+                            <li data-filter='grayscale'><div>grayscale</div></li> 
+                        -->
+                    </ul>
+                </li>
+            </ul>
+        </div>
         <div class='top-menu' style='margin-left:200'>
             <div id='messageboxdiv'>
             <label id="messagebox" class='ui-corner-all'></label>
@@ -181,25 +192,27 @@ div.js_code.example{
             <br/>
             <div>JavaScript:</div>
 			<textarea id="practisejs" style="display: none;">
-//1. Create instance of WebCS from canvas
-let webCS = await WebCS.create({canvas:$("#canvas2GPU")[0]});//let webCS = await WebCS.create({width:512, height:512});
+async function mypractice(message){
+  //1. Create instance of WebCS from canvas
+  let webCS = await WebCS.create({canvas:$("#canvas2GPU")[0]});//let webCS = await WebCS.create({width:512, height:512});
 
-//2. Create shader object
-let cs_texture2 = webCS.createShader(wgsl_invert, { local_size:[8, 8, 1], params:{src:'texture', 'dst':'texture'}});
+  //2. Create shader object
+  let cs_texture2 = webCS.createShader(wgsl_invert, { local_size:[8, 8, 1], params:{src:'texture', 'dst':'texture'}});
 
-//3. dispatch the shader
-let texSrc = $('#image000')[0];
-await (cs_texture2.setGroups(512/8, 512/8, 1)).run(texSrc, null);
+  //3. dispatch the shader
+  let texSrc = $('#image000')[0];
+  await (cs_texture2.setGroups(512/8, 512/8, 1)).run(texSrc, null);
 
-//4. get the texture of dst
-let tex = cs_texture2.getTexture('dst');
+  //4. get the texture of dst
+  let tex = cs_texture2.getTexture('dst');
 
-//5. draw the dst image to webCS.canvas
-webCS.present(tex);
+  //5. draw the dst image to webCS.canvas
+  webCS.present(tex);
 
-//6. show the canvas
-$("#display1")[0].appendChild(webCS.canvas);
-$(webCS.canvas).show();
+  //6. show the canvas
+  $("#display1")[0].appendChild(webCS.canvas);
+  $(webCS.canvas).show();
+}
 			</textarea>
 
             <div id='run_practise'> <label id="run_practise_lable">Execute</label></div>
