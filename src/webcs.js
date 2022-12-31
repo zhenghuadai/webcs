@@ -272,7 +272,6 @@ class CSKernel
                     size: bytes,
                     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
                 });
-                gpuBuffer.size = bytes;
                 return gpuBuffer;
             }
             if (arg == null)
@@ -758,7 +757,7 @@ class WebCS
                     let num_type = param_type.type;
                     // clang-format off
                      layout_str = layout_str +
-                        ` struct struct_${param_name}{ data: array<${num_type}>;} ;\n@group(0) @binding(${pi}) var<storage, read_write> ${param_name} : struct_${param_name};\n`;
+                        ` struct struct_${param_name}{ data: array<${num_type}>} ;\n@group(0) @binding(${pi}) var<storage, read_write> ${param_name} : struct_${param_name};\n`;
                     //            [[group(0), binding(2)]] var<storage, write> resultMatrix : array<f32>;
                     //layout (std430, binding = 0) buffer ssbA {  float A[]; };
                     //`layout (std430, binding = ${pi}) buffer ssb${param_name} {  ${num_type} ${param_name}[]; };`;
@@ -1120,7 +1119,6 @@ class WebCS
             size: size,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
         });
-        gpuBuffer.size = size;
         return gpuBuffer;
     };
     createTexture(fmt, w, h)

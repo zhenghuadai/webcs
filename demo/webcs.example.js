@@ -187,7 +187,7 @@ do_cs.do_texture = async function(kernel_name) {
     let tex = cs_texture.getTexture('dst');
     webCS.present(tex);
     $('#display1')[0].appendChild(webCS.canvas);
-    $('#canvas2GPU').show();
+    $(webCS.canvas).show();
 };
 
 do_cs.do_texture2 = async function(kernel_name) {
@@ -205,7 +205,7 @@ do_cs.do_texture2 = async function(kernel_name) {
     let tex = cs_kernels['texture2'].getTexture('dst');
     webCS.present(tex);
     $('#display1')[0].appendChild(webCS.canvas);
-    $('#canvas2GPU').show();
+    $(webCS.canvas).show();
 };
 
 do_cs.do_img_dwt = async function(kernel_name) {
@@ -233,7 +233,7 @@ do_cs.do_img_dwt = async function(kernel_name) {
     let tex = cs_kernels.cs_img_dwt.getTexture('dst');
     webCS.present(tex);
     $('#display1')[0].appendChild(webCS.canvas);
-    $('#canvas2GPU').show();
+    $(webCS.canvas).show();
 };
 
 do_cs.do_img_texture = async function(kernel_name) {
@@ -250,7 +250,7 @@ do_cs.do_img_texture = async function(kernel_name) {
     let tex = cs_kernels['texture2'].getTexture('dst');
     webCS.present(tex);
     $('#display1')[0].appendChild(webCS.canvas);
-    $('#canvas2GPU').show();
+    $(webCS.canvas).show();
 };
 
 do_cs.do_filter = async function(kernel_name) {
@@ -267,7 +267,7 @@ do_cs.do_filter = async function(kernel_name) {
     let tex = cs_kernels['filter'].getTexture('dst');
     webCS.present(tex);
     $('#display1')[0].appendChild(webCS.canvas);
-    $('#canvas2GPU').show();
+    $(webCS.canvas).show();
 };
 
 do_cs.do_general = async function(kernel_name) {
@@ -284,7 +284,7 @@ do_cs.do_general = async function(kernel_name) {
     let tex = cs_kernels['texture2'].getTexture('dst');
     webCS.present(tex);
     $('#display1')[0].appendChild(webCS.canvas);
-    $('#canvas2GPU').show();
+    $(webCS.canvas).show();
 };
 
 
