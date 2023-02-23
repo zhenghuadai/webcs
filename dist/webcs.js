@@ -885,8 +885,8 @@ class WebCS
         const LOCAL_SIZE_X:u32 = ${local_size[0]}u;
         const LOCAL_SIZE_Y:u32 = ${local_size[1]}u;
         const LOCAL_SIZE_Z:u32 = ${local_size[2]}u;
-        var<private> num_workgroups:vec3<u32>;
-        var<private> workgroup_id:vec3<u32>;
+        var<private> g_num_workgroups:vec3<u32>;
+        var<private> g_workgroup_id:vec3<u32>;
         ${global_func_str}
         fn csmain(thread: vec3<u32>, localthread:vec3<u32>, workgroup_id:vec3<u32>){
             ${csmain_nocomments}
@@ -894,8 +894,8 @@ class WebCS
         @compute @workgroup_size(${local_size[0]}, ${local_size[1]}, ${local_size[2]})
 
         fn main(@builtin(global_invocation_id) thread: vec3<u32>, @builtin(local_invocation_id) localthread: vec3<u32>, @builtin(workgroup_id) block: vec3<u32>, @builtin(num_workgroups) wgs:vec3<u32>) {
-            num_workgroups = wgs;
-            workgroup_id = block;
+            g_num_workgroups = wgs;
+            g_workgroup_id = block;
             csmain(thread, localthread, block);
         }
         `

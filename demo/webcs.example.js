@@ -61,8 +61,8 @@ function gpu_texture(dst){
 }
 function gpu_img_dwt(src, dst){
     return `
-        function  YSize() -> u32{ return u32(workgroup_id.y*num_workgroups.y);}
-        function  XSize() -> u32{ return u32(workgroup_id.x*num_workgroups.x);} 
+        function  YSize() -> u32{ return u32(g_workgroup_id.y*g_num_workgroups.y);}
+        function  XSize() -> u32{ return u32(g_workgroup_id.x*g_num_workgroups.x);} 
         var x:u32 = u32(thread.x);
         var y:u32 = u32(thread.y);
         var p00: vec4<f32> = src[2u*y + 0u][2u*x + 0u];
