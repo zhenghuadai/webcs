@@ -71,7 +71,7 @@ class CSKernel
         }
         if (this.__getNumberOfUniform() > 0)
         {
-            console.log(this.uniformBindGroup)
+            //console.log(this.uniformBindGroup)
             passEncoder.setBindGroup(1, this.uniformBindGroup);
         }
         passEncoder.dispatchWorkgroups(this.groups[0], this.groups[1], this.groups[2]);
@@ -96,11 +96,11 @@ class CSKernel
         {
             uniformValue = new Uint32Array(values);
         }
-        else if (mytype == 'vec4<i32>')
+        else if ((mytype == 'vec4<i32>'))
         {
             uniformValue = new int32Array(values);
         }
-        else if (mytype == 'vec4<f32>')
+        else if ((mytype == 'vec4<f32>') || (mytype == 'mat3x3f'))
         {
             uniformValue = new Float32Array(values);
         }
@@ -109,7 +109,8 @@ class CSKernel
             uniformValue = new Uint32Array(values);
         }
 
-        let bufferSizeInBytes = 16;
+        // TODO: get the correct length
+        let bufferSizeInBytes = 4 * values.length + 16;
         if (this.uniformVids[slot] == null)
         {
             this.uniformVids[slot] = device.createBuffer({
@@ -268,7 +269,7 @@ class CSKernel
             let h = this.settings.groups[1] * this.settings.local_size[1];
             function createBuffer(bytes)
             {
-                let gpuBuffer  = device.createBuffer({
+                let gpuBuffer = device.createBuffer({
                     mappedAtCreation: true,
                     size: bytes,
                     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
@@ -495,12 +496,12 @@ class WebCS
         {
             this.canvas = settings.canvas;
         }
-        this.adapter       = adapter;
-        this.gpuDevice     = device;
-        this.SFmt2DataType = {};
-        this.SFmt2Fmt      = {};
-        this.Str2SFmt      = {};
-        this.presentSettings = {initialized: false};
+        this.adapter         = adapter;
+        this.gpuDevice       = device;
+        this.SFmt2DataType   = {};
+        this.SFmt2Fmt        = {};
+        this.Str2SFmt        = {};
+        this.presentSettings = { initialized: false };
         //this.__setFmt();
     };
 
@@ -545,6 +546,10 @@ class WebCS
         var isWhite           = function(ch) {
             return ((ch == ' ') || (ch == '\t') || (ch == '\n'));
         };
+        var isSeperator = function(ch) {
+            return ((ch == ' ') || (ch == '\t') || (ch == '\n') || (ch == '='));
+        };
+        // process the shared
         // process the shared
         if (true)
         {
@@ -795,8 +800,13 @@ class WebCS
         let unform_str = '';
         if (true)
         {
-            settings.uniform = {};
-            let re           = /this\.uniform\.([a-zA-Z0-9_-]{1,})\.([a-zA-Z0-9_-]{1,})/g;
+            if (!settings.hasOwnProperty('uniform'))
+            {
+                settings.uniform = {};
+            }
+            // var M:u32 = this.uniform.MNK.x;
+            let re = /this\.uniform\.([a-zA-Z0-9_-]{1,})\.([a-zA-Z0-9_-]{1,})/g;
+            // var kernel:mat3x3f = this.uniform.KERNEL;
             let re2          = /this\.uniform\.([a-zA-Z0-9_-]{1,})([^\.a-zA-Z0-9_-])+/g;
             let matches      = [...csmain_nocomments.matchAll(re)];
             let matches2     = [...csmain_nocomments.matchAll(re2)];
@@ -804,6 +814,12 @@ class WebCS
             var indexOfSpace = function(s, startIndex) {
                 let si = startIndex;
                 while (!isWhite(s[si]))
+                    si++;
+                return si;
+            };
+            var indexOfSeperator = function(s, startIndex) {
+                let si = startIndex;
+                while (!isSeperator(s[si]))
                     si++;
                 return si;
             };
@@ -823,6 +839,24 @@ class WebCS
                 'vec4<f32>': 'vec4<f32>',
                 'vec4<f64>': 'vec4<f64>'
             };
+            let updateOneMatch = function(match) {
+                let lineStartI = 0;
+                // get end of prvious expression
+                lineStartI = Math.max(lineStartI, csmain_nocomments.lastIndexOf(';', match.index));
+                lineStartI = Math.max(lineStartI, csmain_nocomments.lastIndexOf('}', match.index));
+                lineStartI = Math.max(lineStartI, csmain_nocomments.lastIndexOf('{', match.index));
+                lineStartI = lineStartI + 1; // prvious expression
+                // if there is ":",  such as     var M:u32 = this.uniform.MNK.x;
+                let colonIndex = csmain_nocomments.lastIndexOf(':', match.index);
+                if (colonIndex > lineStartI)
+                {
+                    let type_si                     = indexOfNonSpace(csmain_nocomments, colonIndex + 1);
+                    let type_ei                     = indexOfSeperator(csmain_nocomments, type_si);
+                    let type_str                    = csmain_nocomments.substring(type_si, type_ei);
+                    let mytype                      = types[type_str] || type_str;
+                    settings.uniform[vname]['type'] = mytype;
+                }
+            };
             for (let match of matches)
             {
                 var vname = match[1];
@@ -833,16 +867,7 @@ class WebCS
                 settings.uniform[vname][match[2]] = 1;
                 if (true)
                 {
-                    let lineStartI = 0;
-                    lineStartI     = Math.max(lineStartI, csmain_nocomments.lastIndexOf(';', match.index));
-                    lineStartI     = Math.max(lineStartI, csmain_nocomments.lastIndexOf('}', match.index));
-                    lineStartI     = Math.max(lineStartI, csmain_nocomments.lastIndexOf('{', match.index));
-                    lineStartI     = lineStartI + 1;
-                    let type_si    = indexOfNonSpace(csmain_nocomments, lineStartI);
-                    let type_ei    = indexOfSpace(csmain_nocomments, type_si);
-                    let type_str   = csmain_nocomments.substring(type_si, type_ei);
-                    let mytype     = types[type_str] || 'vec4<u32>';
-                    settings.uniform[vname]['type'] = mytype;
+                    updateOneMatch(match);
                 }
             }
             for (let match of matches2)
@@ -852,15 +877,19 @@ class WebCS
                 {
                     settings.uniform[vname] = { type: null, fields: {} }
                 }
+                if (true)
+                {
+                    updateOneMatch(match);
+                }
             }
             let pi = 0;
             for (let uniform in settings.uniform)
             {
-                let mytype                      = settings.uniform[uniform].type;
+                let mytype                      = settings.uniform[uniform].type || 'vec4<u32>';
                 settings.uniform[uniform].index = pi;
                 // [[binding(0), group(0)]] var<uniform> params : SimParams;
                 let my_uniform_str = `
-                struct struct_${uniform} {data:${mytype};};
+                struct struct_${uniform} {data:${mytype}};
                 @group(1) @binding(${pi}) var<uniform> ${uniform} : struct_${uniform};`;
                 unform_str = unform_str + my_uniform_str;
             }
@@ -868,8 +897,8 @@ class WebCS
             {
                 for (let uniform in settings.uniform)
                 {
-                    let memaccessor   = new RegExp(['this.uniform.(', uniform, ')', '\\.'].join(''), 'g');
-                    csmain_nocomments = csmain_nocomments.replace(memaccessor, '$1.data.');
+                    let memaccessor   = new RegExp(['this.uniform.(', uniform, ')'].join(''), 'g');
+                    csmain_nocomments = csmain_nocomments.replace(memaccessor, '$1.data');
                 }
                 //csmain_nocomments =
                 //    csmain_nocomments.replace(/this\.uniform\./g, '');
@@ -899,6 +928,8 @@ class WebCS
             csmain(thread, localthread, block);
         }
         `
+        //console.log(source);
+        //console.log(settings);
         // clang-format on
         return this.createShaderFromString(source, settings);
     };
@@ -995,7 +1026,7 @@ class WebCS
     {
         const canvas             = this.canvas;
         const context            = this.canvas.getContext('webgpu');
-        const presentationFormat =  navigator.gpu.getPreferredCanvasFormat(); //"rgba8unorm" ;
+        const presentationFormat = navigator.gpu.getPreferredCanvasFormat(); //"rgba8unorm" ;
         let device               = this.gpuDevice;
 
         /*
@@ -1013,7 +1044,7 @@ class WebCS
         */
         if (this.presentSettings.initialized == false)
         {
-            const presentationSize   = [
+            const presentationSize = [
                 canvas.width,
                 canvas.height,
             ];
@@ -1093,18 +1124,18 @@ class WebCS
                 minFilter: 'linear',
             });
 
-            this.presentSettings.sampler = sampler;
+            this.presentSettings.sampler                = sampler;
             this.presentSettings.fullscreenQuadPipeline = fullscreenQuadPipeline;
-            this.presentSettings.initialized = true;
+            this.presentSettings.initialized            = true;
         }
         else
         {
         }
 
-        let commandEncoder           = device.createCommandEncoder();
-        let _sampler                  = this.presentSettings.sampler;
-        let _fullscreenQuadPipeline   = this.presentSettings.fullscreenQuadPipeline;
-        const renderBindGroup        = device.createBindGroup({
+        let commandEncoder          = device.createCommandEncoder();
+        let _sampler                = this.presentSettings.sampler;
+        let _fullscreenQuadPipeline = this.presentSettings.fullscreenQuadPipeline;
+        const renderBindGroup       = device.createBindGroup({
             layout: _fullscreenQuadPipeline.getBindGroupLayout(0),
             entries: [
                 {
@@ -1117,7 +1148,7 @@ class WebCS
                 },
             ],
         });
-        const passEncoder            = commandEncoder.beginRenderPass({
+        const passEncoder           = commandEncoder.beginRenderPass({
             colorAttachments: [
                 {
                     view: context.getCurrentTexture().createView(),
@@ -1135,8 +1166,8 @@ class WebCS
     };
     createBuffer(size)
     {
-        let device     = this.gpuDevice;
-        let gpuBuffer  = device.createBuffer({
+        let device    = this.gpuDevice;
+        let gpuBuffer = device.createBuffer({
             mappedAtCreation: true,
             size: size,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST

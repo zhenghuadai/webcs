@@ -15,7 +15,7 @@ let gpu_kernels  = {};
 let do_cs        = {};
 var X = 512, Y = 512, Z = 1;
 (function() {
-let testcases = ['smm_naive', 'texture', 'texture2', 'img_texture', 'img_dwt', 'histogram', 'filter'];
+let testcases = ['smm_naive', 'texture', 'texture2', 'img_texture', 'img_dwt', 'histogram', 'filter', 'filter2'];
 // clang-format off
 function gpu_smm_naive(A,B,C){
            return `
@@ -120,6 +120,21 @@ function gpu_filter(src, dst){
     dst[pos.y][pos.x] = sum;     
     `;
 }
+
+function gpu_filter2(src, dst){
+	return `
+    var kernel:mat3x3f = this.uniform.KERNEL;
+    var pos:vec2<u32> = vec2<u32>(thread.xy);
+    var sum:vec4<f32> = vec4<f32>(0.0,0.0,0.0,1.0);
+    for(var j:u32=0; j<3; j++){
+        for(var i:u32=0; i<3; i++){
+            let pixel = src[pos.y + j -1][pos.x + i -1];
+            sum = sum + pixel * kernel[j][i];
+        }
+    }
+    dst[pos.y][pos.x] = sum;     
+    `;
+}
 // clang-format on
 gpu_kernels.smm_naive   = gpu_smm_naive;
 gpu_kernels.texture     = gpu_texture;
@@ -128,6 +143,7 @@ gpu_kernels.img_texture = gpu_texture2;
 gpu_kernels.img_dwt     = gpu_img_dwt;
 gpu_kernels.histogram   = gpu_histogram;
 gpu_kernels.filter      = gpu_filter;
+gpu_kernels.filter2     = gpu_filter2;
 
 // menus for example
 (function() {
@@ -269,6 +285,24 @@ do_cs.do_filter = async function(kernel_name) {
     $('#display1')[0].appendChild(webCS.canvas);
     $(webCS.canvas).show();
 };
+
+do_cs.do_filter2 = async function(kernel_name) {
+    //if (cs_kernels['filter2'] == null)
+    {
+        cs_kernels['filter2'] = webCS.createShader(
+            gpu_filter2,
+            { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: 'texture', 'dst': 'texture' } });
+    }
+
+    let texSrc = $('#image000')[0];
+    // mat3x3f AlignOf(vec) == 16(4float), so each vector has 16 bytes in memory
+    await cs_kernels['filter2'].run(texSrc, null, {'KERNEL':[1.0,1.0,1.0,0.0,   0.0,0.0,0.0,0.0,   -1.0,-1.0,-1.0,0.0]});
+    let tex = cs_kernels['filter2'].getTexture('dst');
+    webCS.present(tex);
+    $('#display1')[0].appendChild(webCS.canvas);
+    $(webCS.canvas).show();
+};
+
 
 do_cs.do_general = async function(kernel_name) {
     if (cs_kernels['texture2'] == null)
