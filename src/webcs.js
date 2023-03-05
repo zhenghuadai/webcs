@@ -6,6 +6,10 @@ function _isArray(arg)
 {
     return Array.isArray(arg) || (ArrayBuffer.isView(arg) && !(arg instanceof DataView));
 }
+function _align16b(n)
+{
+    return (n +15)&0xfffffff0;
+}
 /** class for ComputeShader Kernel*/
 class CSKernel
 {
@@ -91,17 +95,22 @@ class CSKernel
         const slot = this.settings.uniform[name].index;
 
         let uniformValue = null;
-        if (mytype == 'vec4<u32>')
+        let dataType = this.__sfmt2datatype(mytype);
+        if (dataType == 'u32')
         {
             uniformValue = new Uint32Array(values);
         }
-        else if ((mytype == 'vec4<i32>'))
+        else if ((dataType == 'i32'))
         {
-            uniformValue = new int32Array(values);
+            uniformValue = new Int32Array(values);
         }
-        else if ((mytype == 'vec4<f32>') || (mytype == 'mat3x3f'))
+        else if ((dataType == 'f32'))
         {
             uniformValue = new Float32Array(values);
+        }
+        else if ((dataType == 'f16'))
+        {
+            uniformValue = new Uint16Array(values);
         }
         else
         {
@@ -109,7 +118,7 @@ class CSKernel
         }
 
         // TODO: get the correct length
-        let bufferSizeInBytes = 4 * values.length + 16;
+        let bufferSizeInBytes = _align16b(4 * values.length);
         if (this.uniformVids[slot] == null)
         {
             this.uniformVids[slot] = device.createBuffer({
@@ -501,7 +510,7 @@ class WebCS
         this.SFmt2Fmt        = {};
         this.Str2SFmt        = {};
         this.presentSettings = { initialized: false };
-        //this.__setFmt();
+        this.__setFmt();
     };
 
     /*
@@ -690,6 +699,24 @@ class WebCS
                 });
             }
 
+            if (true)
+            {
+                // parse declaration of param from wgsl
+                // e.g
+                // var src:texture_2d<f32>;
+                // var dst : texture_storage_2d<rgba8unorm,write> ;
+                params.forEach(function(ele, idx) {
+                    let myreg = new RegExp('var[\\s]+' + ele + '[\\s]*:[\\s]*([^;]+)[\\s]*;');
+                    let mymatch = csmain_nocomments.match(myreg);
+                    if (mymatch)
+                    {
+                        csmain_nocomments = csmain_nocomments.replace(myreg, '');
+                        settings.params[ele].type.final_type = mymatch[1];
+                    }
+                    //console.log(mymatch);
+                });
+            }
+
             // procecss [], detect readonly/writeonly
             if (true)
             {
@@ -707,7 +734,7 @@ class WebCS
                         for (let texname of params_tex)
                         {
                             let texreader2 = new RegExp(
-                                ['(', texname, ')', '\\s*\\[([^\\[\\]]+)\\]\s*\\[([^\\[\\]]+)\\]'].join(''), 'g');
+                                ['(', texname, ')', '\\s*\\[([^\\[\\]]+)\\]\\s*\\[([^\\[\\]]+)\\]'].join(''), 'g');
                             let texwriter2 = new RegExp(
                                 ['(', texname, ')', '\\s*\\[([^\\[\\]]+)\\]\\s*\\[([^\\[\\]]+)\\]\\s=([^;]+);'].join(
                                     ''),
@@ -761,9 +788,10 @@ class WebCS
                 if (param_type.dim == 1)
                 { // buffer
                     let num_type = param_type.type;
+                    let final_type = param_type.final_type || `array<${num_type}>`;
                     // clang-format off
                      layout_str = layout_str +
-                        ` struct struct_${param_name}{ data: array<${num_type}>} ;\n@group(0) @binding(${pi}) var<storage, read_write> ${param_name} : struct_${param_name};\n`;
+                        ` struct struct_${param_name}{ data: ${final_type}} ;\n@group(0) @binding(${pi}) var<storage, read_write> ${param_name} : struct_${param_name};\n`;
                     //            [[group(0), binding(2)]] var<storage, write> resultMatrix : array<f32>;
                     //layout (std430, binding = 0) buffer ssbA {  float A[]; };
                     //`layout (std430, binding = ${pi}) buffer ssb${param_name} {  ${num_type} ${param_name}[]; };`;
@@ -781,11 +809,13 @@ class WebCS
                         attr = attr + " " + rwmode; 
                     }
                     if(attr.indexOf('readonly') > 0 ){
+                        let final_type = param_type.final_type || `texture_2d<${value_type}>`;
                         layout_str = layout_str +
-                            `@group(0) @binding(${pi}) var ${param_name} : texture_2d<${value_type}>;\n`;
+                            `@group(0) @binding(${pi}) var ${param_name} : ${final_type};\n`;
                     }else{
+                        let final_type = param_type.final_type || `texture_storage_2d<${pix_type}, write>`;
                         layout_str = layout_str +
-                            `@group(0) @binding(${pi}) var ${param_name} : texture_storage_2d<${pix_type}, write>;\n`;
+                            `@group(0) @binding(${pi}) var ${param_name} : ${final_type};\n`;
                     }
                     // clang-format on
                 }
@@ -1299,6 +1329,52 @@ class WebCS
             ['rgba32uint' , 'rgba32uint' , 'u32', 'rgba32uint'],
             ['rgba32sint' , 'rgba32sint' , 'i32', 'rgba32sint'],
             ['rgba32float', 'rgba32float', 'f32', 'rgba32float'],
+            ['u32'        , 'u32'        , 'u32', 'u32'],
+            ['i32'        , 'i32'        , 'i32', 'i32'],
+            ['f32'        , 'f32'        , 'f32', 'f32'],
+            ['f16'        , 'f16'        , 'f16', 'f16'],
+            ['vec2i'      , 'vec2i'      , 'i32', 'vec2<i32>'],
+            ['vec2<i32>'  , 'vec2i'      , 'i32', 'vec2<i32>'],
+            ['vec2u'      , 'vec2u'      , 'u32', 'vec2<u32>'],
+            ['vec2<u32>'  , 'vec2u'      , 'u32', 'vec2<u32>'],
+            ['vec2f'      , 'vec2f'      , 'f32', 'vec2<f32>'],
+            ['vec2<f32>'  , 'vec2f'      , 'f32', 'vec2<f32>'],
+            ['vec2h'      , 'vec2h'      , 'f16', 'vec2<f16>'],
+            ['vec2<f16>'  , 'vec2h'      , 'f16', 'vec2<f16>'],
+            ['vec3i'      , 'vec3i'      , 'i32', 'vec3<i32>'],
+            ['vec3<i32>'  , 'vec3i'      , 'i32', 'vec3<i32>'],
+            ['vec3u'      , 'vec3u'      , 'u32', 'vec3<u32>'],
+            ['vec3<u32>'  , 'vec3u'      , 'u32', 'vec3<u32>'],
+            ['vec3f'      , 'vec3f'      , 'f32', 'vec3<f32>'],
+            ['vec3<f32>'  , 'vec3f'      , 'f32', 'vec3<f32>'],
+            ['vec3h'      , 'vec3h'      , 'f16', 'vec3<f16>'],
+            ['vec3<f16>'  , 'vec3h'      , 'f16', 'vec3<f16>'],
+            ['vec4i'      , 'vec4i'      , 'i32', 'vec4<i32>'],
+            ['vec4<i32>'  , 'vec4i'      , 'i32', 'vec4<i32>'],
+            ['vec4u'      , 'vec4u'      , 'u32', 'vec4<u32>'],
+            ['vec4<u32>'  , 'vec4u'      , 'u32', 'vec4<u32>'],
+            ['vec4f'      , 'vec4f'      , 'f32', 'vec4<f32>'],
+            ['vec4<f32>'  , 'vec4f'      , 'f32', 'vec4<f32>'],
+            ['vec4h'      , 'vec4h'      , 'f16', 'vec4<f16>'],
+            ['vec4<f16>'  , 'vec4h'      , 'f16', 'vec4<f16>'],
+            ['mat2x2f'    , 'mat2x2f'    , 'f32', 'mat2x2<f32>'],
+            ['mat2x2<f32>', 'mat2x2f'    , 'f32', 'mat2x2<f32>'],
+            ['mat2x3f'    , 'mat2x3f'    , 'f32', 'mat2x3<f32>'],
+            ['mat2x3<f32>', 'mat2x3f'    , 'f32', 'mat2x3<f32>'],
+            ['mat2x4f'    , 'mat2x4f'    , 'f32', 'mat2x4<f32>'],
+            ['mat2x4<f32>', 'mat2x4f'    , 'f32', 'mat2x4<f32>'],
+            ['mat3x2f'    , 'mat3x2f'    , 'f32', 'mat3x2<f32>'],
+            ['mat3x2<f32>', 'mat3x2f'    , 'f32', 'mat3x2<f32>'],
+            ['mat3x3f'    , 'mat3x3f'    , 'f32', 'mat3x3<f32>'],
+            ['mat3x3<f32>', 'mat3x3f'    , 'f32', 'mat3x3<f32>'],
+            ['mat3x4f'    , 'mat3x4f'    , 'f32', 'mat3x4<f32>'],
+            ['mat3x4<f32>', 'mat3x4f'    , 'f32', 'mat3x4<f32>'],
+            ['mat4x2f'    , 'mat4x2f'    , 'f32', 'mat4x2<f32>'],
+            ['mat4x2<f32>', 'mat4x2f'    , 'f32', 'mat4x2<f32>'],
+            ['mat4x3f'    , 'mat4x3f'    , 'f32', 'mat4x3<f32>'],
+            ['mat4x3<f32>', 'mat4x3f'    , 'f32', 'mat4x3<f32>'],
+            ['mat4x4f'    , 'mat4x4f'    , 'f32', 'mat4x4<f32>'],
+            ['mat4x4<f32>', 'mat4x4f'    , 'f32', 'mat4x4<f32>'],
         ];
         // clang-format on
         for (let fmt of fmts)

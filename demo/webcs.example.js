@@ -19,10 +19,19 @@ let testcases = ['smm_naive', 'texture', 'texture2', 'img_texture', 'img_dwt', '
 // clang-format off
 function gpu_smm_naive(A,B,C){
            return `
+               // It is optional to decalare the src or dst in wgsl.
+               // Another option is to decalre them when  webCS.createShader : 
+               //     param:{A:"f32[]", B:"f32[]", C:"f32[]"}
+               var A:array<f32>;
+               // var B:array<f32>;
+               // var C:array<f32>;
+
+               //  declare the uniform,  must use 'this.uniform'
                // C[M, N] = A[M, K] * B[K, N]
-               var M:u32 = this.uniform.MNK.x;
-               var N:u32 = this.uniform.MNK.y;
-               var K:u32 = this.uniform.MNK.z;
+               var mnk:vec4u = this.uniform.MNK;
+               var M:u32 = mnk.x;
+               var N:u32 = mnk.y;
+               var K:u32 = mnk.z;
                // Compute a single element C[thread.y, thread.x] by looping over k
                var sum:f32 = 0.0;
                for (var k:u32 = 0u; k < K; k = k+1u)
@@ -123,6 +132,11 @@ function gpu_filter(src, dst){
 
 function gpu_filter2(src, dst){
 	return `
+    // It is optional to decalare the src or dst in wgsl.
+    // Another option is to decalre them when  webCS.createShader : 
+    //     params: { src: 'texture', 'dst': 'texture' }  // compiler will deduce the final type 
+    var src : texture_2d<f32>;
+    //var dst:texture_storage_2d<rgba8unorm,write>;
     var kernel:mat3x3f = this.uniform.KERNEL;
     var pos:vec2<u32> = vec2<u32>(thread.xy);
     var sum:vec4<f32> = vec4<f32>(0.0,0.0,0.0,1.0);
