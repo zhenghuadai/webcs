@@ -15,7 +15,8 @@ let gpu_kernels  = {};
 let do_cs        = {};
 var X = 512, Y = 512, Z = 1;
 (function() {
-let testcases = ['smm_naive', 'texture', 'texture2', 'img_texture', 'img_dwt', 'histogram', 'filter', 'filter2', 'save_texture'];
+let testcases =
+    ['smm_naive', 'texture', 'texture2', 'img_texture', 'img_dwt', 'histogram', 'filter', 'filter2', 'save_texture'];
 // clang-format off
 function gpu_smm_naive(A,B,C){
            return `
@@ -150,15 +151,15 @@ function gpu_filter2(src, dst){
     `;
 }
 // clang-format on
-gpu_kernels.smm_naive   = gpu_smm_naive;
-gpu_kernels.texture     = gpu_texture;
-gpu_kernels.texture2    = gpu_texture2;
-gpu_kernels.img_texture = gpu_texture2;
-gpu_kernels.img_dwt     = gpu_img_dwt;
-gpu_kernels.histogram   = gpu_histogram;
-gpu_kernels.filter      = gpu_filter;
-gpu_kernels.filter2     = gpu_filter2;
-gpu_kernels.save_texture= gpu_texture2;
+gpu_kernels.smm_naive    = gpu_smm_naive;
+gpu_kernels.texture      = gpu_texture;
+gpu_kernels.texture2     = gpu_texture2;
+gpu_kernels.img_texture  = gpu_texture2;
+gpu_kernels.img_dwt      = gpu_img_dwt;
+gpu_kernels.histogram    = gpu_histogram;
+gpu_kernels.filter       = gpu_filter;
+gpu_kernels.filter2      = gpu_filter2;
+gpu_kernels.save_texture = gpu_texture2;
 
 // menus for example
 (function() {
@@ -297,33 +298,35 @@ do_cs.do_save_texture = async function(kernel_name) {
 
     let tex = cs_kernels['texture2'].getTexture('dst');
     webCS.present(tex);
-    let jpeg = webCS.canvas.toDataURL("image/jpeg", 0.5);
+    let jpeg = webCS.canvas.toDataURL('image/jpeg', 0.5);
     //$('#display1')[0].appendChild(webCS.canvas);
-    function addSaveBtn (box, dataurl)
+    function addSaveBtn(box, dataurl)
     {
-        let savebtn =  box.find("#save");
-        if(savebtn.length == 0)
+        let savebtn = box.find('#save');
+        if (savebtn.length == 0)
         {
-            box.append('<div><a href="#" id="save"  class="test_case" download="image.png">Download</a></div>'); 
-            savebtn =  box.find("#save");
-            savebtn.click(function(){
+            box.append('<div><a href="#" id="save"  class="test_case" download="image.png">Download</a></div>');
+            savebtn = box.find('#save');
+            savebtn.click(function() {
                 console.log(dataurl);
                 savebtn[0].href = dataurl;
             });
         }
         savebtn.show();
     }
-    function presentImg(dataurl){
-        let image2 = $('#display1').find("#image2GPU");
-        if(image2.length == 0){
-            image2 = $("<img id='image2GPU' >");
+    function presentImg(dataurl)
+    {
+        let image2 = $('#display1').find('#image2GPU');
+        if (image2.length == 0)
+        {
+            image2 = $('<img id=\'image2GPU\' >');
             $('#display1').append(image2);
-            $('#display1').append("<div></div>");
+            $('#display1').append('<div></div>');
         }
-        image2[0].src=jpeg;
+        image2[0].src = jpeg;
         image2.show();
     }
-    addSaveBtn( $('#display1'), jpeg);
+    addSaveBtn($('#display1'), jpeg);
     presentImg(jpeg);
 };
 
@@ -354,13 +357,13 @@ do_cs.do_filter2 = async function(kernel_name) {
 
     let texSrc = $('#image000')[0];
     // mat3x3f AlignOf(vec) == 16(4float), so each vector has 16 bytes in memory
-    await cs_kernels['filter2'].run(texSrc, null, {'KERNEL':[1.0,1.0,1.0,0.0,   0.0,0.0,0.0,0.0,   -1.0,-1.0,-1.0,0.0]});
+    await cs_kernels['filter2'].run(
+        texSrc, null, { 'KERNEL': [1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.0, -1.0, -1.0, 0.0] });
     let tex = cs_kernels['filter2'].getTexture('dst');
     webCS.present(tex);
     $('#display1')[0].appendChild(webCS.canvas);
     $(webCS.canvas).show();
 };
-
 
 do_cs.do_general = async function(kernel_name) {
     //    if (cs_kernels['texture2'] == null)
@@ -378,7 +381,6 @@ do_cs.do_general = async function(kernel_name) {
     $('#display1')[0].appendChild(webCS.canvas);
     $(webCS.canvas).show();
 };
-
 
 do_cs.do_histogram = async function(kernel_name) {
     // 1. create histogram kernel
@@ -441,9 +443,12 @@ function doExampleGPU(e, ui)
     $('#image2GPU').hide();
     $('#data_div').hide();
     $('#code_' + myfilter).show();
-    if( 'do_' + myfilter in do_cs){
+    if ('do_' + myfilter in do_cs)
+    {
         do_cs['do_' + myfilter](myfilter);
-    } else{
+    }
+    else
+    {
         do_cs['do_general'](myfilter);
     }
 }
@@ -484,7 +489,6 @@ function disablePractice()
     doone(testcases, '#example_menus');
     doone(testcases, '#loadexample_menus');
 })();
-
 
 $('#examplemenu').menu({ select: doExample });
 })();
@@ -567,7 +571,7 @@ $('#examplemenu').menu({ select: doExample });
         let btf2          = hljs.highlight(
             'javascript',
             /*example_js[ele] ||*/ (('do_' + ele in do_cs) ? do_cs['do_' + ele] : do_cs['do_general']).toString());
-        let btf2_value    = btf2.value.replace('gpu_' + ele, '<span class="hljs-title">gpu_' + ele + '</span>');
+        let btf2_value = btf2.value.replace('gpu_' + ele, '<span class="hljs-title">gpu_' + ele + '</span>');
         if (use_example)
         {
             btf2_value = 'await (async function(kernel_name) {' + btf2_value + '\n})();';
@@ -598,7 +602,7 @@ $(function() {
         formatall(editorjs);
         let test_str =
             //editorgpu.getValue() + '\n async function mypractice(){' + editorjs.getValue() + '}; mypractice();';
-            editorgpu.getValue() + '\n (' + editorjs.getValue() + ')("test")'; 
+            editorgpu.getValue() + '\n (' + editorjs.getValue() + ')("test")';
         eval(test_str);
     });
 
@@ -621,7 +625,6 @@ $(function() {
             $('#practice_div').hide();
             $('#code_div').show();
         }
-
     }
     if (document.location.hash === '#practise')
     {
@@ -651,7 +654,7 @@ $(function() {
             webCS = await WebCS.create({ canvas: $('#canvas2GPU')[0] });
             //webCS = new WebCS();
         }
- 
+
         let ele = myfilter;
         editorgpu.setValue(gpu_kernels[ele].toString());
         editorjs.setValue((('do_' + ele in do_cs) ? do_cs['do_' + ele] : do_cs['do_general']).toString());
