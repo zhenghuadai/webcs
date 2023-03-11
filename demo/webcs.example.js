@@ -15,7 +15,7 @@ let gpu_kernels  = {};
 let do_cs        = {};
 var X = 512, Y = 512, Z = 1;
 (function() {
-let testcases = ['smm_naive', 'texture', 'texture2', 'img_texture', 'img_dwt', 'histogram', 'filter', 'filter2'];
+let testcases = ['smm_naive', 'texture', 'texture2', 'img_texture', 'img_dwt', 'histogram', 'filter', 'filter2', 'save_texture'];
 // clang-format off
 function gpu_smm_naive(A,B,C){
            return `
@@ -158,6 +158,7 @@ gpu_kernels.img_dwt     = gpu_img_dwt;
 gpu_kernels.histogram   = gpu_histogram;
 gpu_kernels.filter      = gpu_filter;
 gpu_kernels.filter2     = gpu_filter2;
+gpu_kernels.save_texture= gpu_texture2;
 
 // menus for example
 (function() {
@@ -175,7 +176,7 @@ do_cs.do_smm_naive = async function(kernel_name) {
     let cpuA = createArray(M * K);
     let cpuB = createArray(K * N);
     let cpuC = createArray(M * N);
-    if (cs_smm_naive == null)
+    //if (cs_smm_naive == null)
     {
         cs_smm_naive = webCS.createShader(gpu_smm_naive, { local_size: [8, 8, 1], groups: [M / 8, N / 8, 1] });
     }
@@ -206,7 +207,7 @@ do_cs.do_smm_naive = async function(kernel_name) {
 do_cs.do_texture = async function(kernel_name) {
     //ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
     //imageStore(dst, storePos, vec4(vec2(gl_WorkGroupID.xy) / vec2(gl_NumWorkGroups.xy), 0.0, 1.0));
-    if (cs_texture == null)
+    //if (cs_texture == null)
     {
         cs_texture = webCS.createShader(
             gpu_texture, { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { 'dst': 'texture' } });
@@ -222,7 +223,7 @@ do_cs.do_texture = async function(kernel_name) {
 
 do_cs.do_texture2 = async function(kernel_name) {
     do_cs.do_texture();
-    if (cs_kernels['texture2'] == null)
+    //if (cs_kernels['texture2'] == null)
     {
         cs_kernels['texture2'] = webCS.createShader(
             gpu_texture2,
@@ -239,13 +240,13 @@ do_cs.do_texture2 = async function(kernel_name) {
 };
 
 do_cs.do_img_dwt = async function(kernel_name) {
-    if (cs_kernels.cs_img_dwt == null)
+    //if (cs_kernels.cs_img_dwt == null)
     {
         cs_kernels.cs_img_dwt = webCS.createShader(
             gpu_img_dwt,
             { local_size: [8, 8, 1], groups: [X / 16, Y / 16, 1], params: { src: 'texture', 'dst': 'texture' } });
     }
-    if (cs_kernels.cs_texcopy == null)
+    //if (cs_kernels.cs_texcopy == null)
     {
         cs_kernels.cs_texcopy = webCS.createShader(
             gpu_texcopy, { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: '[][]', 'dst': '[][]' } });
@@ -267,7 +268,7 @@ do_cs.do_img_dwt = async function(kernel_name) {
 };
 
 do_cs.do_img_texture = async function(kernel_name) {
-    if (cs_kernels['texture2'] == null)
+    //if (cs_kernels['texture2'] == null)
     {
         cs_kernels['texture2'] = webCS.createShader(
             gpu_texture2,
@@ -281,6 +282,49 @@ do_cs.do_img_texture = async function(kernel_name) {
     webCS.present(tex);
     $('#display1')[0].appendChild(webCS.canvas);
     $(webCS.canvas).show();
+};
+
+do_cs.do_save_texture = async function(kernel_name) {
+    //if (cs_kernels['texture2'] == null)
+    {
+        cs_kernels['texture2'] = webCS.createShader(
+            gpu_texture2,
+            { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: 'texture', 'dst': 'texture' } });
+    }
+
+    let texSrc = $('#image000')[0];
+    await cs_kernels['texture2'].run(texSrc, null);
+
+    let tex = cs_kernels['texture2'].getTexture('dst');
+    webCS.present(tex);
+    let jpeg = webCS.canvas.toDataURL("image/jpeg", 0.5);
+    //$('#display1')[0].appendChild(webCS.canvas);
+    function addSaveBtn (box, dataurl)
+    {
+        let savebtn =  box.find("#save");
+        if(savebtn.length == 0)
+        {
+            box.append('<div><a href="#" id="save"  class="test_case" download="image.png">Download</a></div>'); 
+            savebtn =  box.find("#save");
+            savebtn.click(function(){
+                console.log(dataurl);
+                savebtn[0].href = dataurl;
+            });
+        }
+        savebtn.show();
+    }
+    function presentImg(dataurl){
+        let image2 = $('#display1').find("#image2GPU");
+        if(image2.length == 0){
+            image2 = $("<img id='image2GPU' >");
+            $('#display1').append(image2);
+            $('#display1').append("<div></div>");
+        }
+        image2[0].src=jpeg;
+        image2.show();
+    }
+    addSaveBtn( $('#display1'), jpeg);
+    presentImg(jpeg);
 };
 
 do_cs.do_filter = async function(kernel_name) {
@@ -319,7 +363,7 @@ do_cs.do_filter2 = async function(kernel_name) {
 
 
 do_cs.do_general = async function(kernel_name) {
-    if (cs_kernels['texture2'] == null)
+    //    if (cs_kernels['texture2'] == null)
     {
         cs_kernels['texture2'] = webCS.createShader(
             gpu_kernels[kernel_name],
@@ -393,6 +437,8 @@ function doExampleGPU(e, ui)
     let myfilter = ui.item.attr('data-filter');
     $('.code.example').hide();
     $('#canvas2GPU').hide();
+    $('.test_case').hide();
+    $('#image2GPU').hide();
     $('#data_div').hide();
     $('#code_' + myfilter).show();
     if( 'do_' + myfilter in do_cs){
@@ -575,6 +621,7 @@ $(function() {
             $('#practice_div').hide();
             $('#code_div').show();
         }
+
     }
     if (document.location.hash === '#practise')
     {
@@ -593,6 +640,12 @@ $(function() {
         }
         $('#GPUToggleButton').prop('checked', true);
         setPractice();
+
+        $('.code.example').hide();
+        $('#canvas2GPU').hide();
+        $('.test_case').hide();
+        $('#image2GPU').hide();
+        $('#data_div').hide();
         if (webCS == null)
         {
             webCS = await WebCS.create({ canvas: $('#canvas2GPU')[0] });
