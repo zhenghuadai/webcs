@@ -313,7 +313,7 @@ class CSKernel
                         // gl.bindBuffer(gl.SHADER_STORAGE_BUFFER, null);
                         this.vids[i]           = createBuffer(arg.byteLength);
                         const hostAccessBuffer = this.vids[i].getMappedRange();
-                        new Float32Array(hostAccessBuffer).set(arg);
+                        new arg.constructor(hostAccessBuffer).set(arg);
                         this.vids[i].unmap();
                     }
                     else
@@ -326,7 +326,7 @@ class CSKernel
                 {
                     this.vids[i]           = createBuffer(arg.byteLength);
                     const hostAccessBuffer = this.vids[i].getMappedRange();
-                    new Float32Array(hostAccessBuffer).set(arg);
+                    new arg.constructor(hostAccessBuffer).set(arg);
                     this.vids[i].unmap();
                 }
             }
