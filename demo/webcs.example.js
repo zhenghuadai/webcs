@@ -15,8 +15,10 @@ let gpu_kernels  = {};
 let do_cs        = {};
 var X = 512, Y = 512, Z = 1;
 (function() {
-let testcases =
-    ['smm_naive', 'texture', 'texture2', 'img_texture', 'img_dwt', 'histogram', 'filter', 'filter2', 'save_texture'];
+let testcases = [
+    'addu32', 'smm_naive', 'texture', 'texture2', 'img_texture', 'img_dwt', 'histogram', 'filter', 'filter2',
+    'save_texture'
+];
 // clang-format off
 function gpu_smm_naive(A,B,C){
            return `
@@ -45,6 +47,15 @@ function gpu_smm_naive(A,B,C){
            `;
 }
 
+function gpu_addu32(src0, src1, dst){
+    return `
+        // dst[:] = src0[:] + src1[:]
+        var src0:array<u32>;
+        var src1:array<u32>;
+        var dst:array<u32>;
+        dst[thread.x] = src0[thread.x] + src1[thread.x];
+        `;
+}
 function gpu_texcopy(src, dst){
     return `
         dst[thread.y][thread.x] = src[thread.y][thread.x];     
@@ -160,6 +171,7 @@ gpu_kernels.histogram    = gpu_histogram;
 gpu_kernels.filter       = gpu_filter;
 gpu_kernels.filter2      = gpu_filter2;
 gpu_kernels.save_texture = gpu_texture2;
+gpu_kernels.addu32       = gpu_addu32;
 
 // menus for example
 (function() {
@@ -204,6 +216,37 @@ do_cs.do_smm_naive = async function(kernel_name) {
         $('#data_div').show();
     }
     $('#code_smm_naive').show();
+};
+
+do_cs.do_addu32 = async function(kernel_name) {
+    // cpuC = cpuA + cpuB
+    var N           = 64;
+    var createArray = function(n) {
+        var buf = new Uint32Array(n);
+        for (var i = 0; i < n; i++)
+        {
+            buf[i] = Math.random() * N;
+        }
+        return buf;
+    };
+    let cpuA      = createArray(N);
+    let cpuB      = createArray(N);
+    let cpuC      = createArray(N);
+    let cs_addu32 = webCS.createShader(gpu_addu32, { local_size: [64, 1, 1], groups: [N / 64, 1, 1] });
+
+    const t0 = performance.now();
+    await cs_addu32.run(cpuA, cpuB, cpuC);
+    const t1 = performance.now();
+    let t    = t1 - t0;
+    $('#time').html(t.toFixed(1).toString());
+    if (true) // Check result
+    {
+        cpuC = await cs_addu32.getData('dst', 'uint32');
+        displayMatrix(cpuA, 'gpuA', $('#data0_div')[0], 1, N);
+        displayMatrix(cpuB, 'gpuB', $('#data1_div')[0], 1, N);
+        displayMatrix(cpuC, 'gpuC', $('#data2_div')[0], 1, N);
+        $('#data_div').show();
+    }
 };
 do_cs.do_texture = async function(kernel_name) {
     //ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);
@@ -300,6 +343,8 @@ do_cs.do_save_texture = async function(kernel_name) {
     webCS.present(tex);
     let jpeg = webCS.canvas.toDataURL('image/jpeg', 0.5);
     //$('#display1')[0].appendChild(webCS.canvas);
+    addSaveBtn($('#display1'), jpeg);
+    presentImg(jpeg);
     function addSaveBtn(box, dataurl)
     {
         let savebtn = box.find('#save');
@@ -323,11 +368,9 @@ do_cs.do_save_texture = async function(kernel_name) {
             $('#display1').append(image2);
             $('#display1').append('<div></div>');
         }
-        image2[0].src = jpeg;
+        image2[0].src = dataurl;
         image2.show();
     }
-    addSaveBtn($('#display1'), jpeg);
-    presentImg(jpeg);
 };
 
 do_cs.do_filter = async function(kernel_name) {
