@@ -65,12 +65,14 @@ https://blog.biosuefi.com/webcs.html#practise
             let cpuA = createArray(M * K);
             let cpuB = createArray(K * N);
             let cpuC = createArray(M * N);
+            // groups is optional
+            // local_size is mandatory
             let cs_smm_naive = webCS.createShader(gpu_smm_naive, { local_size: [8, 8, 1], groups: [M / 8, N / 8, 1] });
          
             const t0 = performance.now();
-            await cs_smm_naive.run(cpuA, cpuB, cpuC, { 'MNK': [M, N, K, 0] });
             // or await cs_smm_naive.run(cpuA, cpuB, cpuC, M / 8, N / 8, 1, { 'MNK': [M, N, K, 0] });
             // or await (cs_smm_naive.setGroups(M / 8, N / 8, 1)).run(cpuA, cpuB, cpuC, { 'MNK': [M, N, K, 0] });
+            await cs_smm_naive.run(cpuA, cpuB, cpuC, { 'MNK': [M, N, K, 0] });
             const t1 = performance.now();
             let t    = t1 - t0;
             $('#time').html(t.toFixed(1).toString());
@@ -96,13 +98,15 @@ https://blog.biosuefi.com/webcs.html#practise
             let webCS = await WebCS.create({width:X, height:Y});
             // or let webCS = await WebCS.create({canvas:$("#canvas2GPU")[0]});
 
+            // groups is optional
+            // local_size is mandatory
             let tex_kernel = webCS.createShader(gpu_texture2,
             { local_size: [8, 8, 1], groups: [X / 8, Y / 8, 1], params: { src: 'texture', 'dst': 'texture' } });
 
             let texSrc = $('#image000')[0];
-            await tex_kernel.run(texSrc, null);
             // or await (tex_kernel.setGroups(X / 8, Y / 8, 1)).run(texSrc, null);
             // or await tex_kernel.run(texSrc, null, X / 8, Y / 8, 1);
+            await tex_kernel.run(texSrc, null);
   
             let tex = tex_kernel.getTexture('dst');
             webCS.present(tex);
@@ -128,7 +132,21 @@ input type for a kernel:
    - e.g. let result = new Float32Array(64*64); cs_sgemm.getData('C', result);
 ### uniform
   - use this.uniform. as prefix for any uniform in GLSL shader string.
-
+### dispatch
+```
+    /**
+     * Dispatch Compute Kernel
+     *
+     * @param {} arg -   a list of shader arguments, such as run(arg0, arg1, ..., argn)
+     * @param {unfold_of_vec3} groups_xyz - optional, the size of work group, such as run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z)
+     * @param {{}} uniform    - optional, uniform , such as run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z, {uniform_name:uniform[0,1,2,3]})
+     * @example
+     * run(arg0, arg1, ..., argn)
+     * run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z)
+     * run(arg0, arg1, ..., argn, groups_x, groups_y, groups_z, {uniform_name:uniform[0,1,2,3]})
+     * run(arg0, arg1, ..., argn, {uniform_name:uniform[0,1,2,3]})
+     */
+```
 ## License
 
 Code is under [MIT](http://davidsonfellipe.mit-license.org) license

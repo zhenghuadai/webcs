@@ -273,8 +273,8 @@ class CSKernel
         let argType = this.settings.params[argName].type;
         if (isBuffer(argType))
         {
-            let w = this.settings.groups[0] * this.settings.local_size[0];
-            let h = this.settings.groups[1] * this.settings.local_size[1];
+            let w = this.groups[0] * this.settings.local_size[0];
+            let h = this.groups[1] * this.settings.local_size[1];
             function createBuffer(bytes)
             {
                 let gpuBuffer = device.createBuffer({
