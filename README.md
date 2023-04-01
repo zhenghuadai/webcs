@@ -69,6 +69,8 @@ https://blog.biosuefi.com/webcs.html#practise
          
             const t0 = performance.now();
             await cs_smm_naive.run(cpuA, cpuB, cpuC, { 'MNK': [M, N, K, 0] });
+            // or await cs_smm_naive.run(cpuA, cpuB, cpuC, M / 8, N / 8, 1, { 'MNK': [M, N, K, 0] });
+            // or await (cs_smm_naive.setGroups(M / 8, N / 8, 1)).run(cpuA, cpuB, cpuC, { 'MNK': [M, N, K, 0] });
             const t1 = performance.now();
             let t    = t1 - t0;
             $('#time').html(t.toFixed(1).toString());
@@ -99,6 +101,8 @@ https://blog.biosuefi.com/webcs.html#practise
 
             let texSrc = $('#image000')[0];
             await tex_kernel.run(texSrc, null);
+            // or await (tex_kernel.setGroups(X / 8, Y / 8, 1)).run(texSrc, null);
+            // or await tex_kernel.run(texSrc, null, X / 8, Y / 8, 1);
   
             let tex = tex_kernel.getTexture('dst');
             webCS.present(tex);

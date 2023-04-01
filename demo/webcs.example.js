@@ -196,6 +196,8 @@ do_cs.do_smm_naive = async function(kernel_name) {
 
     const t0 = performance.now();
     await cs_smm_naive.run(cpuA, cpuB, cpuC, { 'MNK': [M, N, K, 0] });
+    // or await cs_smm_naive.run(cpuA, cpuB, cpuC, M / 8, N / 8, 1, { 'MNK': [M, N, K, 0] });
+    // or await (cs_smm_naive.setGroups(M / 8, N / 8, 1)).run(cpuA, cpuB, cpuC, { 'MNK': [M, N, K, 0] });
     const t1 = performance.now();
     let t    = t1 - t0;
     $('#time').html(t.toFixed(1).toString());
@@ -235,7 +237,8 @@ do_cs.do_addu32 = async function(kernel_name) {
     let cs_addu32 = webCS.createShader(gpu_addu32, { local_size: [64, 1, 1], groups: [N / 64, 1, 1] });
 
     const t0 = performance.now();
-    await cs_addu32.run(cpuA, cpuB, cpuC);
+    await (cs_addu32.setGroups(N / 64, 1, 1)).run(cpuA, cpuB, cpuC);
+    // or await cs_addu32.run(cpuA, cpuB, cpuC, N / 64, 1, 1)
     const t1 = performance.now();
     let t    = t1 - t0;
     $('#time').html(t.toFixed(1).toString());
