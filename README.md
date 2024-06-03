@@ -14,7 +14,7 @@ Note: Must enable *https*, otherwise webgpu won't work
 
 ## Demo
 
-https://zhenghuadai.github.io/webcs.html
+https://zhenghuadai.github.io/webCS.html
 
 ## Practise
 
