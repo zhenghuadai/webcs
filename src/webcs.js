@@ -985,4 +985,16 @@ export class WebCS {
             this.Str2SFmt[str] = sfmt;
         }
     }
+    __sfmt2datatype(fmt)
+    {
+        return this.SFmt2DataType[fmt] || 'f32';
+    };
+    __sfmt2fmt(fmt)
+    {
+        return this.SFmt2Fmt[fmt] || 'rgba8unorm';
+    };
+    __str2sfmt(str)
+    {
+        return this.Str2SFmt[str] || 'rgba8unorm';
+    };
 }
